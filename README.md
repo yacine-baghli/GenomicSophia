@@ -1,102 +1,105 @@
-# 🧬 GenomicOracle Co-Pilot
+# KAIROS · Patient Scoring Dashboard
 
-**AI-Powered Genomic Case Triage Dashboard** — built for the SOPHiA Genetics × ETH Zurich Future of Health Hackathon (May 8–10, 2026).
+**AI-assisted genomic case triage** — built for the SOPHiA Genetics × ETH Zurich Future of Health Hackathon (May 8–10, 2026).
 
-Helps genomic pathologists prioritize their caseload by ranking samples by clinical urgency using a **5-metric scoring system**.
-
----
-
-## 🎯 What It Does
-
-A pathologist arrives Monday morning with dozens of pending analyses. GenomicOracle Co-Pilot instantly ranks every case by urgency so she knows **where to start**.
-
-Each variant is scored across **5 clinical metrics** (0–100):
-
-| Metric | What It Measures |
-|--------|------------------|
-| **Actionability** | Is there a targeted therapy? (EGFR→Osimertinib, BRCA→Olaparib, etc.) |
-| **Disease Urgency** | ACMG classification + ABCD predictor + consequence severity |
-| **QA Confidence** | Read depth + allele frequency + predictor agreement |
-| **gnomAD Rarity** | Population frequency (rarer = more likely pathogenic) |
-| **ClinVar Evidence** | ClinVar significance + review status strength |
-
-Cases are ranked **🔴 Critical → 🟠 High → 🟡 Moderate → 🟢 Low**.
+Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs.
 
 ---
 
-## 🚀 Quick Start
+## What It Does
+
+A pathologist arrives Monday morning with a queue of pending analyses. KAIROS scores each patient across three objective dimensions and ranks them so she knows where to start — and lets her tune the ranking to match her clinical priorities.
+
+| Score | What It Measures |
+|---|---|
+| **Disease Urgency** | SOPHiA DDM™ ABCD prediction: A=critical, B/C=elevated, D=benign — soft-clipped to 0–100 |
+| **Rarity** | Community frequency inverted for A/B-class variants — rarer variants score higher |
+| **QA Confidence** | Mean read depth normalized 0–100 — flags low-coverage samples |
+
+The three scores combine into a weighted **Overall Priority** score. Weights are adjustable live in the dashboard.
+
+---
+
+## Quick Start
 
 ```bash
-# Clone
-git clone https://github.com/YOUR_USERNAME/GenomicOracle.git
-cd GenomicOracle
-
-# Install
+git clone https://github.com/yacine-baghli/GenomicSophia.git
+cd GenomicSophia/interface
 pip install -r requirements.txt
-
-# Run
-python app.py
+uvicorn main:app --reload
 ```
 
-Open **http://127.0.0.1:5001** in your browser.
+Open **http://localhost:8000** in your browser.
 
 ---
 
-## 📊 Data Sources (3 options)
+## Usage
 
-### 🔌 VQS API (Live SOPHiA DDM™ integration)
-1. Get a token from: https://iam-vandv.sophiagenetics.com/account/token
-2. Get dataset keys from browser DevTools (Network tab)
-3. Paste both into the dashboard → **Analyze**
+### Demo patients
+Click **Demo** in the sidebar to instantly load the three bundled example CSVs (`patient1.csv`, `patient2.csv`, `patient3.csv`) — no upload needed.
 
-### 📄 CSV Upload
-Upload a CSV with columns: `Sample, Gene, HGVS, Consequence, ACMG, ABCD, ClinVar, gnomAD, ReadDepth, AF`
+### Upload your own
+Click **+ Upload**, drag and drop up to 10 SOPHiA DDM™ variant export CSVs, then click **Score Patients**. Uploading the same file again creates a versioned copy (`patient (v2).csv`) rather than overwriting.
 
-### 📋 Demo Mode
-Click **Demo** → **Load Demo Data** to see 4 pre-built oncology cases.
+### Adjust weights
+Each score row in the breakdown panel has a 0–10 slider. Drag to shift emphasis — the overall score and sidebar ranking update live.
 
 ---
 
-## 🌓 Dark / Light Mode
+## Input Format
 
-Click the **☀️ Light / 🌙 Dark** button in the top-right corner.
+Standard SOPHiA DDM™ variant export CSV. Required columns:
+
+| Column | Used For |
+|---|---|
+| `SOPHiA DDM™ prediction` (col 2) | Disease urgency — values A / B / C / D |
+| `Read depth` | QA confidence normalization |
+| `Community frequency` | Rarity score for A/B variants |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-GenomicOracle/
-├── app.py              # Flask routes (VQS API + CSV + demo)
-├── ai_engine.py        # 5-metric scoring engine + CSV parser + LLM summaries
-├── vqs_client.py       # SOPHiA VQS API client (auth + query)
-├── requirements.txt    # Python dependencies
-├── test_vqs_api.ps1    # PowerShell script to test VQS API
-├── templates/
-│   └── copilot.html    # Dashboard HTML
-└── static/
-    ├── style.css       # Dark/Light theme CSS
-    └── app.js          # Frontend logic
+interface/
+├── main.py              # FastAPI backend — /api/score, /api/demo
+├── compute_scores.py    # Scoring engine (disease urgency, rarity, QA)
+├── static/
+│   └── index.html       # KAIROS dashboard (single-file SPA)
+├── patient1.csv         # Demo data — SOPHiA DDM™ export format
+├── patient2.csv
+├── patient3.csv
+└── requirements.txt
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Backend | Flask (Python) |
-| Scoring | Rule-based 5-metric engine |
-| API | SOPHiA VQS (DuckDB-as-a-service) |
-| LLM (optional) | Gemini / GPT-4o / Claude |
-| Frontend | Vanilla HTML/CSS/JS, Inter font |
+|---|---|
+| Backend | FastAPI + Uvicorn |
+| Scoring | `compute_scores.py` — pure pandas, no ML |
+| Frontend | Vanilla HTML/CSS/JS — zero dependencies |
+| Data | SOPHiA DDM™ variant export CSV |
 
 ---
 
-## ⚠️ Disclaimer
+## API
 
-Hackathon prototype — not for clinical use. All scoring is rule-based and should be validated by qualified professionals.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/score` | POST | Score uploaded CSV files (multipart/form-data, `files` field, max 10) |
+| `/api/demo` | GET | Score the bundled demo patients |
+
+Both return `{ "results": [ { "file", "Rows analyzed", "Disease urgency score", "Rarity score (A/B community freq)", "QA confidence score", "Overall patient score" }, ... ] }` sorted by overall score descending.
 
 ---
 
-Built with ❤️ at ETH Zurich for the **Future of Health Hackathon 2026**
+## Disclaimer
+
+Hackathon prototype — not for clinical use. Scoring is rule-based and must be validated by qualified professionals before any clinical application.
+
+---
+
+Built at ETH Zurich for the **Future of Health Hackathon 2026** in collaboration with SOPHiA Genetics.
