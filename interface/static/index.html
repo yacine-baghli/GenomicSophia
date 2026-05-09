@@ -114,7 +114,10 @@ body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-
   <aside class="sidebar">
     <div class="sidebar-head">
       <span class="lbl" id="inbox-lbl">INBOX · 0 AWAITING REVIEW</span>
-      <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="showModal()">+ Upload</button>
+      <div style="display:flex;gap:5px;">
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="loadDemo()" id="demo-btn">Demo</button>
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="showModal()">+ Upload</button>
+      </div>
     </div>
     <div class="sidebar-list" id="sidebar-list">
       <div class="empty-state" style="height:auto;padding:40px 20px;">
@@ -274,6 +277,28 @@ async function runScoring() {
   } finally {
     $('run-btn').disabled=false;
     $('run-spin').style.display='none';
+  }
+}
+
+// ── Demo ──────────────────────────────────────────────────────
+async function loadDemo() {
+  const btn = $('demo-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const res = await fetch('/api/demo');
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    allResults = [...allResults, ...data.results];
+    allResults.sort((a,b) => (b['Overall patient score']||0) - (a['Overall patient score']||0));
+    allResults = allResults.filter((r,i) => allResults.findIndex(x => x.file === r.file) === i);
+    renderSidebar();
+    if (allResults.length) selectPatient(0);
+  } catch(e) {
+    alert('Demo load failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Demo';
   }
 }
 

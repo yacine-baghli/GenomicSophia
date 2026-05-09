@@ -17,6 +17,28 @@ app = FastAPI(title="VQS Patient Scoring — compute_scores.py")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+DEMO_FILES = ["patient1.csv", "patient2.csv", "patient3.csv"]
+
+@app.get("/api/demo")
+async def demo():
+    results = []
+    base = Path(__file__).parent
+    for name in DEMO_FILES:
+        path = base / name
+        if not path.exists():
+            continue
+        try:
+            scores = score_one_csv(path)
+        except Exception as e:
+            scores = {"file": name, "error": str(e), "Rows analyzed": 0,
+                      "Disease urgency score": 0, "Rarity score (A/B community freq)": 0,
+                      "QA confidence score": 0, "Overall patient score": 0}
+        scores["file"] = name
+        results.append(scores)
+    results.sort(key=lambda r: r.get("Overall patient score", 0), reverse=True)
+    return {"results": results}
+
+
 @app.post("/api/score")
 async def score(files: List[UploadFile] = File(...)):
     if len(files) > 10:
