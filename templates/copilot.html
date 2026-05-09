@@ -2,15 +2,16 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>GenomicOracle Co-Pilot v2</title>
+<title>Genomic Co-Pilot — AI Case Triage Dashboard</title>
+<meta name="description" content="AI-powered genomic variant triage dashboard with 5-metric scoring for clinical prioritization">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="top-bar">
- <div><h1>🧬 GenomicOracle Co-Pilot</h1><div class="subtitle">AI-Powered Case Triage — 5-Metric Scoring</div></div>
+ <div><h1>🧬 Genomic Co-Pilot</h1><div class="subtitle">AI-Powered Case Triage — SOPHiA DDM™ Integration</div></div>
  <div style="display:flex;align-items:center;gap:1rem">
-  <span id="conn-status"><span class="dot off"></span>Ready</span>
+  <span id="conn-status"><span class="dot spin"></span>Loading...</span>
   <button class="btn-sm" onclick="toggleTheme()" id="theme-btn">☀️ Light</button>
  </div>
 </div>
@@ -18,11 +19,24 @@
 <!-- Source selector -->
 <div class="panel">
  <div class="tabs">
-  <button class="tab active" onclick="switchTab('api',this)">🔌 VQS API</button>
-  <button class="tab" onclick="switchTab('csv',this)">📄 CSV File</button>
-  <button class="tab" onclick="switchTab('demo',this)">📋 Demo</button>
+  <button class="tab active" id="tab-btn-csv" onclick="switchTab('csv',this)">📄 CSV Data</button>
+  <button class="tab" id="tab-btn-api" onclick="switchTab('api',this)">🔌 VQS API</button>
+  <button class="tab" id="tab-btn-demo" onclick="switchTab('demo',this)">📋 Demo</button>
  </div>
- <div id="tab-api" class="tab-body">
+ <div id="tab-csv" class="tab-body">
+  <label class="field-label">Sample files in /samples</label>
+  <div id="sample-list" class="sample-chips" style="margin-bottom:1rem">Loading...</div>
+  <div class="row" style="align-items:center">
+   <div class="field" style="flex:2">
+    <label>Add CSV files to /samples</label>
+    <input type="file" id="csv-files" accept=".csv,.tsv,.txt" multiple>
+   </div>
+   <button class="btn-secondary" onclick="uploadFiles()" id="btn-upload">⬆ Add Files</button>
+   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm-csv"><option value="none">None</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Claude</option></select></div>
+   <button class="btn-primary" onclick="rankAll()" id="btn-rank">🔬 Rank All Cases</button>
+  </div>
+ </div>
+ <div id="tab-api" class="tab-body" style="display:none">
   <div class="row">
    <div class="field"><label>Username</label><input id="username" value="hackathon6@hackathon.com"></div>
    <div class="field"><label>Password</label><input id="password" type="password" value="Gono399764"></div>
@@ -31,22 +45,21 @@
    <button class="btn-primary" onclick="runVQS()">🔍 Analyze</button>
   </div>
  </div>
- <div id="tab-csv" class="tab-body" style="display:none">
-  <div class="row">
-   <div class="field" style="flex:2"><label>Upload CSV (columns: Sample, Gene, HGVS, ACMG, ABCD, ClinVar, gnomAD, ReadDepth, AF, Consequence)</label><input type="file" id="csv-file" accept=".csv,.tsv,.txt"></div>
-   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm-csv"><option value="none">None</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Claude</option></select></div>
-   <button class="btn-primary" onclick="runCSV()">📊 Analyze CSV</button>
-  </div>
- </div>
  <div id="tab-demo" class="tab-body" style="display:none">
   <button class="btn-primary" onclick="loadDemo()">📋 Load Demo Data (4 sample cases)</button>
  </div>
 </div>
 
 <div id="cases-grid" class="cases-grid">
- <div class="empty"><div class="icon">🧬</div><p>Select a data source above and click Analyze to see ranked cases.</p></div>
+ <div class="empty"><div class="icon">⏳</div><p>Loading and ranking sample data...</p></div>
 </div>
 
 <script src="/static/app.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  refreshSamples();
+  rankAll();
+});
+</script>
 </body>
 </html>

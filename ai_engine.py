@@ -196,18 +196,34 @@ def compute_clinvar_score(clinvar_sig, clinvar_review=""):
 def score_variant(record):
     """Compute all 5 metrics for a single variant. Returns dict with scores."""
     gene = str(_get_field(record, "transcriptome.gene.symbol", "gene", "Gene", "GENE")).strip()
-    consequence = str(_get_field(record, "short.annotated.transcriptContext.proteinVariant.consequence.sophiaNameSelect", "consequence", "Consequence", "CONSEQUENCE")).strip()
-    acmg = str(_get_field(record, "userAnnotations.interpretation.acmg.result.classificationFinal", "clinical_significance", "acmg", "ACMG", "Classification")).strip()
-    abcd = str(_get_field(record, "short_predictor.inhouse.predictors.ABCD.result.label", "abcd", "ABCD")).strip()
-    clinvar_sig = str(_get_field(record, "short.annotated.catalogs.clinvar.CLNSIG", "clinvar", "ClinVar", "CLINVAR")).strip()
-    clinvar_rev = str(_get_field(record, "short.annotated.catalogs.clinvar.CLNREVSTAT", "clinvar_review", "ClinVarReview")).strip()
-    gnomad = _get_field(record, "short.annotated.catalogs.gnomadGenomes.global.global.value", "short.annotated.catalogs.gnomadExomes.global.global.value", "gnomad", "gnomAD", "GNOMAD")
-    read_depth = _get_field(record, "short.called.readDepth", "read_depth", "ReadDepth", "DP")
-    allele_freq = _get_field(record, "short.called.alleleFrequency", "allele_frequency", "AF", "VAF")
-    hgvs_c = _get_field(record, "short.annotated.transcriptContext.transcriptVariant.cnomen.base", "hgvs_c")
-    hgvs_p = _get_field(record, "short.annotated.transcriptContext.proteinVariant.pnomen.hgvsRefSeq", "hgvs_p", "hgvs", "HGVS")
-    chrom = _get_field(record, "short.called.variant.location.chromosome.fullSeqName", "chromosome", "CHROM", "Chr")
-    in_report = _get_field(record, "userAnnotations.interpretation.inReport.flagged", "in_report", default=False)
+    consequence = str(_get_field(record, "short.annotated.transcriptContext.proteinVariant.consequence.sophiaNameSelect",
+                                 "Coding consequence", "consequence", "Consequence", "CONSEQUENCE")).strip()
+    acmg = str(_get_field(record, "userAnnotations.interpretation.acmg.result.classificationFinal",
+                           "Pathogenicity Classification", "user_classification",
+                           "clinical_significance", "acmg", "ACMG", "Classification")).strip()
+    abcd = str(_get_field(record, "short_predictor.inhouse.predictors.ABCD.result.label",
+                           "SOPHiA DDM\u2122 prediction", "SOPHiA DDM prediction",
+                           "abcd", "ABCD")).strip()
+    clinvar_sig = str(_get_field(record, "short.annotated.catalogs.clinvar.CLNSIG",
+                                  "clinvar_significance", "clinvar", "ClinVar", "CLINVAR")).strip()
+    clinvar_rev = str(_get_field(record, "short.annotated.catalogs.clinvar.CLNREVSTAT",
+                                  "clinvar_review_status", "clinvar_review", "ClinVarReview")).strip()
+    gnomad = _get_field(record, "short.annotated.catalogs.gnomadGenomes.global.global.value",
+                         "short.annotated.catalogs.gnomadExomes.global.global.value",
+                         "gnomAD AF exomes", "gnomAD AF genomes",
+                         "gnomad", "gnomAD", "GNOMAD")
+    read_depth = _get_field(record, "short.called.readDepth", "Read depth",
+                             "read_depth", "ReadDepth", "DP")
+    allele_freq = _get_field(record, "short.called.alleleFrequency", "VAF(%)",
+                              "allele_frequency", "AF", "VAF")
+    hgvs_c = _get_field(record, "short.annotated.transcriptContext.transcriptVariant.cnomen.base",
+                         "c.DNA", "cDNA", "hgvs_c")
+    hgvs_p = _get_field(record, "short.annotated.transcriptContext.proteinVariant.pnomen.hgvsRefSeq",
+                         "Protein", "protein_hgvs", "hgvs_p", "hgvs", "HGVS")
+    chrom = _get_field(record, "short.called.variant.location.chromosome.fullSeqName",
+                        "Position", "chromosome", "CHROM", "Chr")
+    in_report = _get_field(record, "userAnnotations.interpretation.inReport.flagged",
+                            "in_report", default=False)
 
     actionability, therapies = compute_actionability(gene, consequence)
     disease_urgency = compute_disease_urgency(acmg, abcd, consequence)
@@ -346,19 +362,24 @@ def rank_cases(cases_dict):
 
 def parse_csv_to_cases(csv_text):
     """
-    Parse a CSV string into cases dict. Expects columns like:
-    Sample, Gene, HGVS, Consequence, ACMG, ABCD, ClinVar, gnomAD, ReadDepth, AF ...
-    Groups rows by 'Sample' column (or treats all as one case).
+    Parse a CSV string into cases dict. Supports SOPHiA DDM export format
+    and generic CSV with columns like Sample, Gene, HGVS, etc.
+    Groups rows by 'sample'/'patient' column (or treats all as one case).
     """
     reader = csv.DictReader(StringIO(csv_text))
     cases = {}
     for row in reader:
-        # Determine sample/case id
+        # Determine sample/case id — SOPHiA DDM uses 'sample' and 'patient' columns
         sample = (
-            row.get("Sample") or row.get("sample") or row.get("SAMPLE")
+            row.get("sample") or row.get("Sample") or row.get("SAMPLE")
+            or row.get("patient") or row.get("Patient")
             or row.get("Case") or row.get("case") or row.get("SampleID")
             or "Sample A"
         )
+        # SOPHiA DDM exports often have trailing semicolons in these fields
+        sample = str(sample).strip().rstrip(";").strip()
+        if not sample:
+            sample = "Sample A"
         cases.setdefault(sample, []).append(row)
     return cases
 
@@ -440,7 +461,7 @@ def _generate_fallback_summary(scored_case):
     bullets = []
     bullets.append(f"{scored_case['total_variants']} variants — {scored_case['pathogenic_count']} pathogenic, {scored_case['actionable_count']} actionable.")
     ag = [v["gene"] for v in scored_case["scored_variants"] if v["actionability"] >= 50]
-    bullets.append(f"Actionable genes: {', '.join(set(ag)[:4]) or 'None'}.")
+    bullets.append(f"Actionable genes: {', '.join(list(set(ag))[:4]) or 'None'}.")
     if scored_case["top_therapies"]:
         bullets.append(f"Consider: {', '.join(scored_case['top_therapies'][:3])}.")
     else:
