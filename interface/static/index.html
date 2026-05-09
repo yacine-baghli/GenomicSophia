@@ -90,6 +90,34 @@ body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #9CA3AF; text-align: center; padding: 40px; }
+
+/* ── Tooltips ────────────────────────────────────────────────── */
+[data-tip] { position: relative; }
+[data-tip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1F2937;
+  pointer-events: none; opacity: 0;
+  transition: opacity .15s ease; z-index: 1001;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 13px);
+  left: 50%; transform: translateX(-50%);
+  background: #1F2937; color: #F9FAFB;
+  font-size: 11px; line-height: 1.55; font-weight: 400;
+  padding: 6px 10px; border-radius: 3px;
+  white-space: normal; width: max-content; max-width: 230px;
+  pointer-events: none; opacity: 0;
+  transition: opacity .15s ease; z-index: 1000; text-align: left;
+}
+[data-tip]:hover::before, [data-tip]:hover::after { opacity: 1; }
+[data-tip-r]::before { left: auto; right: 0; transform: none; }
+[data-tip-r]::after  { left: auto; right: 0; transform: none; }
 </style>
 </head>
 <body>
@@ -240,14 +268,14 @@ function clinvarColor(sig) {
 
 function classCountPills(counts) {
   const cfg = [
-    ['P',  '#FEF2F2','#DC2626','#FCA5A5'],
-    ['LP', '#FFF7ED','#C2410C','#FED7AA'],
-    ['VUS','#F9FAFB','#6B7280','#D1D5DB'],
-    ['LB', '#EFF6FF','#1D4ED8','#BFDBFE'],
-    ['B',  '#F0FDF4','#059669','#6EE7B7'],
+    ['P',  '#FEF2F2','#DC2626','#FCA5A5', 'Pathogenic — high-confidence disease-causing variant per ClinVar'],
+    ['LP', '#FFF7ED','#C2410C','#FED7AA', 'Likely Pathogenic — probable disease-causing variant per ClinVar'],
+    ['VUS','#F9FAFB','#6B7280','#D1D5DB', 'Variant of Uncertain Significance — clinical relevance unclear, requires further evidence'],
+    ['LB', '#EFF6FF','#1D4ED8','#BFDBFE', 'Likely Benign — probable benign variant per ClinVar'],
+    ['B',  '#F0FDF4','#059669','#6EE7B7', 'Benign — known non-disease-causing variant per ClinVar'],
   ];
-  return cfg.map(([k,bg,fg,border]) =>
-    `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:${bg};color:${fg};border:1px solid ${border};">${k}: ${counts[k]||0}</span>`
+  return cfg.map(([k,bg,fg,border,tip]) =>
+    `<span data-tip="${tip}" style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:${bg};color:${fg};border:1px solid ${border};cursor:default;">${k}: ${counts[k]||0}</span>`
   ).join('');
 }
 
@@ -413,12 +441,12 @@ function renderSidebar() {
         <div style="min-width:0;">
           <div class="lbl" style="margin-bottom:2px;">${caseId}</div>
           <div style="font-size:15px;font-weight:300;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-          <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)} · ${r._uploadedAt ? timeAgo(r._uploadedAt) : ''}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)} · <span data-tip="Time elapsed since this CSV was scored in this session" style="cursor:default;">${r._uploadedAt ? timeAgo(r._uploadedAt) : ''}</span></div>
           ${(r.top_genes||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;">${(r.top_genes||[]).slice(0,3).map(g=>`<span style="font-size:9px;font-weight:600;letter-spacing:.03em;padding:1px 5px;border-radius:2px;background:${g.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${g.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${g.prediction==='A'?'#FCA5A5':'#FED7AA'};">${esc(g.gene)}</span>`).join('')}</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
-          <span style="font-size:10px;letter-spacing:.1em;${priBadgeClass(level)}">${level}</span>
-          ${(r.actionable_count||0) > 0 ? `<span style="font-size:9px;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:2px;padding:1px 5px;">${r.actionable_count} act.</span>` : ''}
+          <span data-tip="Priority tier based on Disease Urgency score relative to others in this inbox. CRITICAL ≥75%, HIGH ≥40%, MED ≥15%, LOW below that." style="font-size:10px;letter-spacing:.1em;${priBadgeClass(level)};cursor:default;">${level}</span>
+          ${(r.actionable_count||0) > 0 ? `<span data-tip="Variants with DDM prediction A — direct therapeutic relevance. Click to open and review the Top Variants table." style="font-size:9px;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:2px;padding:1px 5px;cursor:default;">${r.actionable_count} act.</span>` : ''}
         </div>
       </div>
       <div class="pri-bar">
@@ -479,11 +507,11 @@ function selectPatient(idx) {
         </div>` : ''}
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px;">
           ${classCountPills(r.classification_counts||{})}
-          ${(r.vaf_stats&&r.vaf_stats.mean!=null) ? `<span style="font-size:10px;color:#6B7280;margin-left:4px;">VAF ${r.vaf_stats.min}–${r.vaf_stats.max}% · mean ${r.vaf_stats.mean}%</span>` : ''}
-          ${(r.actionable_count||0)>0 ? `<span style="font-size:10px;font-weight:600;color:#DC2626;">· ${r.actionable_count} actionable</span>` : ''}
+          ${(r.vaf_stats&&r.vaf_stats.mean!=null) ? `<span data-tip="Variant Allele Frequency range across all variants. VAF below 5% may indicate subclonal events or sequencing artefacts — verify with orthogonal methods." style="font-size:10px;color:#6B7280;margin-left:4px;cursor:default;">VAF ${r.vaf_stats.min}–${r.vaf_stats.max}% · mean ${r.vaf_stats.mean}%</span>` : ''}
+          ${(r.actionable_count||0)>0 ? `<span data-tip="Number of variants with SOPHiA DDM™ prediction A — highest clinical urgency tier, direct therapeutic relevance. These variants warrant immediate review." style="font-size:10px;font-weight:600;color:#DC2626;cursor:default;">· ${r.actionable_count} actionable</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
-          <span class="lbl" style="flex-shrink:0;">Indication</span>
+          <span class="lbl" data-tip="Free-text clinical indication (e.g. tumour type, referral reason). Included in the auto-drafted report." style="flex-shrink:0;cursor:default;">Indication</span>
           <input type="text" value="${esc(indications[r.file]||'')}" placeholder="Enter clinical indication…"
             oninput="indications['${esc(r.file)}']=this.value"
             style="flex:1;max-width:320px;border:none;border-bottom:1px solid #E5E7EB;font-size:12px;color:#374151;background:transparent;outline:none;padding:2px 0;font-family:inherit;">
@@ -497,7 +525,7 @@ function selectPatient(idx) {
 
     ${(r.low_coverage_genes||[]).length ? `
     <div style="margin-top:14px;padding:10px 14px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:2px;font-size:11px;color:#92400E;display:flex;gap:8px;align-items:flex-start;">
-      <span style="font-weight:600;flex-shrink:0;">⚠ Low coverage:</span>
+      <span data-tip="Genes with mean read depth below 50×. Sparse coverage reduces sensitivity for variant detection — a negative result in these genes may not rule out pathogenic variants." style="font-weight:600;flex-shrink:0;cursor:default;">⚠ Low coverage:</span>
       <span>${r.low_coverage_genes.map(g=>`${esc(g.gene)} (${g.depth}×)`).join(' · ')}</span>
     </div>` : ''}
 
@@ -505,22 +533,22 @@ function selectPatient(idx) {
 
     <!-- 4 metric cards -->
     <div class="metrics">
-      <div class="metric">
+      <div class="metric" data-tip="Weighted average of Disease Urgency, Rarity and QA scores. Adjust the weights in the Score Breakdown panel below to shift the ranking.">
         <div class="lbl">Priority</div>
         <div class="metric-val" id="card-overall">${overall.toFixed(0)}</div>
         <div class="lbl" style="color:#D1D5DB;">composite</div>
       </div>
-      <div class="metric">
+      <div class="metric" data-tip="Mean inverted community frequency for A/B-class variants. Higher score = rarer variants not commonly seen in population databases. Low community frequency suggests possible pathogenicity.">
         <div class="lbl">Rarity</div>
         <div class="metric-val">${actPct.toFixed(0)}</div>
         <div style="font-size:11px;color:#6B7280;">A/B community freq</div>
       </div>
-      <div class="metric">
+      <div class="metric" data-tip="Derived from SOPHiA DDM™ ABCD prediction: A = critical (10 pts), B/C = elevated (3/2 pts), D = benign (0 pts). Scores are summed across all variants then soft-clipped to 0–100.">
         <div class="lbl">Disease Urgency</div>
         <div class="metric-val metric-val-text" style="color:${urgColor};">${level}</div>
         <div style="font-size:11px;color:#6B7280;">${urgency.toFixed(0)} raw score</div>
       </div>
-      <div class="metric">
+      <div class="metric" data-tip="Mean read depth across all variants, normalized 0–100 relative to the cohort. Low values indicate sparse coverage — variant calls in those regions are less reliable.">
         <div class="lbl">QA Confidence</div>
         <div class="metric-val">${qa.toFixed(0)}%</div>
         <div style="font-size:11px;color:#6B7280;">read-depth normalised</div>
@@ -535,8 +563,12 @@ function selectPatient(idx) {
         <span class="lbl">${r.top_variants.length} shown</span>
       </div>
       <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px;gap:0;border-bottom:1px solid #F3F4F6;padding:6px 16px;background:#FAFAFA;">
-        <div class="lbl">Gene</div><div class="lbl">DDM</div><div class="lbl">Consequence · Protein</div>
-        <div class="lbl">ClinVar</div><div class="lbl" style="text-align:center;">★</div><div class="lbl" style="text-align:right;">VAF%</div>
+        <div class="lbl" data-tip="HGNC gene symbol" style="cursor:default;">Gene</div>
+        <div class="lbl" data-tip="SOPHiA DDM™ ABCD prediction: A = highest urgency (actionable), B = elevated, C = moderate, D = benign" style="cursor:default;">DDM</div>
+        <div class="lbl" data-tip="Coding consequence type (e.g. missense, frameshift) and protein-level HGVS notation" style="cursor:default;">Consequence · Protein</div>
+        <div class="lbl" data-tip="ClinVar clinical significance — reflects community-curated evidence for pathogenicity. Color: red=Pathogenic, orange=Likely pathogenic, grey=VUS, blue=Likely benign, green=Benign" style="cursor:default;">ClinVar</div>
+        <div class="lbl" style="text-align:center;" data-tip="ClinVar review status: ●●●● reviewed by expert panel, ●●● multiple submitters no conflicts, ●● single submitter with criteria, ● no assertion criteria" style="cursor:default;">★</div>
+        <div class="lbl" style="text-align:right;" data-tip="Variant Allele Frequency — fraction of reads supporting the alternate allele. Values below 5% may indicate subclonal mutations or artefacts." style="cursor:default;">VAF%</div>
       </div>
       ${r.top_variants.map(v=>`
       <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px;gap:0;padding:9px 16px;border-bottom:1px solid #F9FAFB;align-items:center;" onmouseenter="this.style.background='#FAFAFA'" onmouseleave="this.style.background=''">
@@ -560,10 +592,10 @@ function selectPatient(idx) {
 
       <div class="score-row">
         <div>
-          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Disease Urgency</div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;" data-tip="Urgency is derived from the SOPHiA DDM™ ABCD prediction column. A=10 pts, B=3, C=2, D=0. Points are summed across all variants then soft-clipped to 0–100 so only extreme cases reach the top.">Disease Urgency</div>
           <div style="font-size:11px;color:#9CA3AF;">Col 2 ABCD: A=100, B/C=20, D=0 · summed across all rows</div>
           <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
-            <span class="lbl">Weight</span>
+            <span class="lbl" data-tip="Drag to increase or decrease how much Disease Urgency contributes to the overall priority score. Set to 0 to exclude it entirely." style="cursor:default;">Weight</span>
             <input type="range" min="0" max="10" value="${weights.urgency}" oninput="onWeightChange('urgency',this.value)" style="width:72px;accent-color:#EF4444;cursor:pointer;">
             <span id="w-val-urgency" style="font-size:10px;color:#6B7280;min-width:10px;">${weights.urgency}</span>
           </div>
@@ -576,10 +608,10 @@ function selectPatient(idx) {
 
       <div class="score-row">
         <div>
-          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Rarity</div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;" data-tip="Rarity measures how uncommon the A/B-class variants are in the SOPHiA community database. Low community frequency suggests a novel or rare variant — more likely to be truly pathogenic.">Rarity</div>
           <div style="font-size:11px;color:#9CA3AF;">Inverted community freq · A/B variants only</div>
           <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
-            <span class="lbl">Weight</span>
+            <span class="lbl" data-tip="Increase to prioritize patients with rarer variants. Useful when looking for novel germline findings or rare somatic drivers." style="cursor:default;">Weight</span>
             <input type="range" min="0" max="10" value="${weights.rarity}" oninput="onWeightChange('rarity',this.value)" style="width:72px;accent-color:#10B981;cursor:pointer;">
             <span id="w-val-rarity" style="font-size:10px;color:#6B7280;min-width:10px;">${weights.rarity}</span>
           </div>
@@ -592,10 +624,10 @@ function selectPatient(idx) {
 
       <div class="score-row">
         <div>
-          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">QA Confidence</div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;" data-tip="QA Confidence reflects sequencing depth. High read depth gives more reliable variant calls. Mean depth is normalized 0–100 across the cohort — a sample with lower depth than peers scores lower.">QA Confidence</div>
           <div style="font-size:11px;color:#9CA3AF;">Mean read depth normalised 0–100</div>
           <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
-            <span class="lbl">Weight</span>
+            <span class="lbl" data-tip="Increase to surface only high-confidence, well-covered samples. Lower if you want to review all cases regardless of coverage quality." style="cursor:default;">Weight</span>
             <input type="range" min="0" max="10" value="${weights.qa}" oninput="onWeightChange('qa',this.value)" style="width:72px;accent-color:#1D4ED8;cursor:pointer;">
             <span id="w-val-qa" style="font-size:10px;color:#6B7280;min-width:10px;">${weights.qa}</span>
           </div>
@@ -680,7 +712,7 @@ function sharedGenesHtml() {
   if (!shared.length) return '';
   return `
   <div class="panel" style="margin-top:0;border-top:none;">
-    <div class="panel-head"><span class="lbl-dark">Shared Genes · Across Patients</span></div>
+    <div class="panel-head"><span class="lbl-dark" data-tip="Genes with A/B-class variants appearing in multiple patients in this batch. Recurrent hits may indicate a hotspot or — if unexpected — a run-level sequencing artefact worth investigating." style="cursor:default;">Shared Genes · Across Patients</span></div>
     ${shared.map(([gene, {files, prediction}]) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #F9FAFB;">
       <span style="font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;background:${prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${prediction==='A'?'#FCA5A5':'#FED7AA'};flex-shrink:0;">${esc(gene)}</span>
