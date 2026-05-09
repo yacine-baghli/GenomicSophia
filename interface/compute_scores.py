@@ -58,22 +58,6 @@ def score_one_csv(input_csv: Path) -> dict:
 
     overall_score = round((disease_urgency_score + rarity_score + qa_confidence_score) / 3, 1)
 
-    # Top genes: A then B predictions, deduplicated by gene name, max 5.
-    gene_col = df.columns[0]
-    pred_order = {"A": 0, "B": 1}
-    gene_rows = df[[gene_col, second_col]].copy()
-    gene_rows["_ord"] = gene_rows[second_col].astype(str).str.strip().str.upper().map(pred_order)
-    gene_rows = gene_rows.dropna(subset=["_ord"]).sort_values("_ord")
-    seen: set = set()
-    top_genes = []
-    for _, row in gene_rows.iterrows():
-        g = str(row[gene_col]).strip()
-        if g not in seen:
-            seen.add(g)
-            top_genes.append({"gene": g, "prediction": str(row[second_col]).strip().upper()})
-        if len(top_genes) >= 5:
-            break
-
     return {
         "file": input_csv.name,
         "Rows analyzed": len(df),
@@ -81,7 +65,6 @@ def score_one_csv(input_csv: Path) -> dict:
         "Rarity score (A/B community freq)": rarity_score,
         "QA confidence score": qa_confidence_score,
         "Overall patient score": overall_score,
-        "top_genes": top_genes,
     }
 
 

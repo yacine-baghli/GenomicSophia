@@ -1,9 +1,9 @@
-import io
 import sys
 import tempfile
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -12,6 +12,27 @@ from fastapi.staticfiles import StaticFiles
 # Import score_one_csv from sibling compute_scores.py
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from compute_scores import score_one_csv  # noqa: E402
+
+
+def extract_top_genes(path: Path) -> list:
+    try:
+        df = pd.read_csv(path)
+        gene_col, pred_col = df.columns[0], df.columns[1]
+        order = {"A": 0, "B": 1}
+        rows = df[[gene_col, pred_col]].copy()
+        rows["_ord"] = rows[pred_col].astype(str).str.strip().str.upper().map(order)
+        rows = rows.dropna(subset=["_ord"]).sort_values("_ord")
+        seen, result = set(), []
+        for _, row in rows.iterrows():
+            g = str(row[gene_col]).strip()
+            if g not in seen:
+                seen.add(g)
+                result.append({"gene": g, "prediction": str(row[pred_col]).strip().upper()})
+            if len(result) >= 5:
+                break
+        return result
+    except Exception:
+        return []
 
 app = FastAPI(title="VQS Patient Scoring — compute_scores.py")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -34,6 +55,7 @@ async def demo():
                       "Disease urgency score": 0, "Rarity score (A/B community freq)": 0,
                       "QA confidence score": 0, "Overall patient score": 0}
         scores["file"] = name
+        scores["top_genes"] = extract_top_genes(path)
         results.append(scores)
     results.sort(key=lambda r: r.get("Overall patient score", 0), reverse=True)
     return {"results": results}
@@ -58,6 +80,7 @@ async def score(files: List[UploadFile] = File(...)):
 
         try:
             scores = score_one_csv(tmp_path)
+            scores["top_genes"] = extract_top_genes(tmp_path)
         except Exception as e:
             scores = {
                 "file": upload.filename,
@@ -72,12 +95,11 @@ async def score(files: List[UploadFile] = File(...)):
         finally:
             tmp_path.unlink(missing_ok=True)
 
-        # Use original filename in result
         scores["file"] = upload.filename
         results.append(scores)
 
     # Sort by overall score descending
-    results.sort(key=lambda r: r.get("Overall CSV score", 0), reverse=True)
+    results.sort(key=lambda r: r.get("Overall patient score", 0), reverse=True)
     return {"results": results}
 
 
