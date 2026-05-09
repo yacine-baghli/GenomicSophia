@@ -205,15 +205,51 @@ body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-
 <script>
 // ── State ─────────────────────────────────────────────────────
 let selectedFiles = [];
-let allResults = [];   // scored results from API
+let allResults = [];
 let selectedIdx = null;
 let selectedFile = null;
 let weights = {urgency: 5, rarity: 5, qa: 5};
+let indications = {};   // indication text keyed by r.file
 
 // ── Helpers ───────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmt(n){ return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1}); }
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function starsHtml(n) {
+  return '<span style="color:#F59E0B;letter-spacing:1px;">' + '●'.repeat(n) + '</span>' +
+         '<span style="color:#E5E7EB;">' + '○'.repeat(Math.max(0, 4-n)) + '</span>';
+}
+
+function clinvarColor(sig) {
+  const s = (sig||'').toLowerCase();
+  if (s.includes('likely pathogenic')) return '#C2410C';
+  if (s.includes('pathogenic')) return '#DC2626';
+  if (s.includes('likely benign')) return '#1D4ED8';
+  if (s.includes('benign')) return '#059669';
+  return '#6B7280';
+}
+
+function classCountPills(counts) {
+  const cfg = [
+    ['P',  '#FEF2F2','#DC2626','#FCA5A5'],
+    ['LP', '#FFF7ED','#C2410C','#FED7AA'],
+    ['VUS','#F9FAFB','#6B7280','#D1D5DB'],
+    ['LB', '#EFF6FF','#1D4ED8','#BFDBFE'],
+    ['B',  '#F0FDF4','#059669','#6EE7B7'],
+  ];
+  return cfg.map(([k,bg,fg,border]) =>
+    `<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:${bg};color:${fg};border:1px solid ${border};">${k}: ${counts[k]||0}</span>`
+  ).join('');
+}
 
 function urgencyLevel(score, max) {
   const pct = max > 0 ? score / max : 0;
@@ -263,6 +299,7 @@ function mergeWithVersioning(incoming) {
     if (count > 0) {
       r.file = base.replace(/(\.[^.]+)$/, ` (v${count + 1})$1`) || base + ` (v${count + 1})`;
     }
+    r._uploadedAt = Date.now();
     allResults.push(r);
   });
   allResults.sort((a,b) => (b['Overall patient score']||0) - (a['Overall patient score']||0));
@@ -376,10 +413,13 @@ function renderSidebar() {
         <div style="min-width:0;">
           <div class="lbl" style="margin-bottom:2px;">${caseId}</div>
           <div style="font-size:15px;font-weight:300;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
-          <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)} · ${r._uploadedAt ? timeAgo(r._uploadedAt) : ''}</div>
           ${(r.top_genes||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;">${(r.top_genes||[]).slice(0,3).map(g=>`<span style="font-size:9px;font-weight:600;letter-spacing:.03em;padding:1px 5px;border-radius:2px;background:${g.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${g.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${g.prediction==='A'?'#FCA5A5':'#FED7AA'};">${esc(g.gene)}</span>`).join('')}</div>` : ''}
         </div>
-        <span style="font-size:10px;letter-spacing:.1em;flex-shrink:0;margin-left:8px;${priBadgeClass(level)}">${level}</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
+          <span style="font-size:10px;letter-spacing:.1em;${priBadgeClass(level)}">${level}</span>
+          ${(r.actionable_count||0) > 0 ? `<span style="font-size:9px;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:2px;padding:1px 5px;">${r.actionable_count} act.</span>` : ''}
+        </div>
       </div>
       <div class="pri-bar">
         <div class="pri-fill" style="width:${pct.toFixed(1)}%"></div>
@@ -434,10 +474,20 @@ function selectPatient(idx) {
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;">
           ${(r.top_genes||[]).map(g=>`
             <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:2px;background:${g.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${g.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${g.prediction==='A'?'#FCA5A5':'#FED7AA'};">
-              ${esc(g.gene)}
-              <span style="font-size:9px;opacity:.7;">${g.prediction}</span>
+              ${esc(g.gene)}<span style="font-size:9px;opacity:.7;">${g.prediction}</span>
             </span>`).join('')}
         </div>` : ''}
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px;">
+          ${classCountPills(r.classification_counts||{})}
+          ${(r.vaf_stats&&r.vaf_stats.mean!=null) ? `<span style="font-size:10px;color:#6B7280;margin-left:4px;">VAF ${r.vaf_stats.min}–${r.vaf_stats.max}% · mean ${r.vaf_stats.mean}%</span>` : ''}
+          ${(r.actionable_count||0)>0 ? `<span style="font-size:10px;font-weight:600;color:#DC2626;">· ${r.actionable_count} actionable</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+          <span class="lbl" style="flex-shrink:0;">Indication</span>
+          <input type="text" value="${esc(indications[r.file]||'')}" placeholder="Enter clinical indication…"
+            oninput="indications['${esc(r.file)}']=this.value"
+            style="flex:1;max-width:320px;border:none;border-bottom:1px solid #E5E7EB;font-size:12px;color:#374151;background:transparent;outline:none;padding:2px 0;font-family:inherit;">
+        </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;margin-left:20px;">
         <button class="btn" onclick="showModal()">Upload More</button>
@@ -445,7 +495,13 @@ function selectPatient(idx) {
       </div>
     </div>
 
-    ${r.error ? `<div style="margin-top:16px;padding:12px 14px;border:1px solid #FCA5A5;background:#FEF2F2;font-size:12px;color:#DC2626;border-radius:2px;">${esc(r.error)}</div>` : ''}
+    ${(r.low_coverage_genes||[]).length ? `
+    <div style="margin-top:14px;padding:10px 14px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:2px;font-size:11px;color:#92400E;display:flex;gap:8px;align-items:flex-start;">
+      <span style="font-weight:600;flex-shrink:0;">⚠ Low coverage:</span>
+      <span>${r.low_coverage_genes.map(g=>`${esc(g.gene)} (${g.depth}×)`).join(' · ')}</span>
+    </div>` : ''}
+
+    ${r.error ? `<div style="margin-top:14px;padding:12px 14px;border:1px solid #FCA5A5;background:#FEF2F2;font-size:12px;color:#DC2626;border-radius:2px;">${esc(r.error)}</div>` : ''}
 
     <!-- 4 metric cards -->
     <div class="metrics">
@@ -470,6 +526,31 @@ function selectPatient(idx) {
         <div style="font-size:11px;color:#6B7280;">read-depth normalised</div>
       </div>
     </div>
+
+    <!-- Top variants table -->
+    ${(r.top_variants||[]).length ? `
+    <div class="panel" style="margin-top:18px;">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="lbl-dark">Top Variants · A/B Prediction</span>
+        <span class="lbl">${r.top_variants.length} shown</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px;gap:0;border-bottom:1px solid #F3F4F6;padding:6px 16px;background:#FAFAFA;">
+        <div class="lbl">Gene</div><div class="lbl">DDM</div><div class="lbl">Consequence · Protein</div>
+        <div class="lbl">ClinVar</div><div class="lbl" style="text-align:center;">★</div><div class="lbl" style="text-align:right;">VAF%</div>
+      </div>
+      ${r.top_variants.map(v=>`
+      <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px;gap:0;padding:9px 16px;border-bottom:1px solid #F9FAFB;align-items:center;" onmouseenter="this.style.background='#FAFAFA'" onmouseleave="this.style.background=''">
+        <div style="font-size:12px;font-weight:600;color:#111;">${esc(v.gene)}</div>
+        <div><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:2px;background:${v.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${v.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${v.prediction==='A'?'#FCA5A5':'#FED7AA'};">${esc(v.prediction)}</span></div>
+        <div style="min-width:0;">
+          <div style="font-size:11px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(v.consequence)}</div>
+          <div style="font-size:10px;color:#9CA3AF;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(v.protein)}</div>
+        </div>
+        <div style="font-size:10px;color:${clinvarColor(v.clinvar)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(v.clinvar)}">${esc(v.clinvar)}</div>
+        <div style="text-align:center;font-size:10px;">${starsHtml(v.clinvar_stars||0)}</div>
+        <div style="text-align:right;font-size:11px;font-weight:500;color:#374151;">${v.vaf!=null?v.vaf+'%':'—'}</div>
+      </div>`).join('')}
+    </div>` : ''}
 
     <!-- Score breakdown -->
     <div class="panel" style="margin-top:20px;">
@@ -582,6 +663,30 @@ function renderComparison(activeIdx, maxUrgency) {
       <div class="lbl" style="text-align:right;">Score</div>
     </div>
     ${rows}
+  </div>
+  ${sharedGenesHtml()}`;
+}
+
+function sharedGenesHtml() {
+  const geneMap = {};
+  allResults.forEach(r => {
+    (r.top_genes||[]).forEach(({gene, prediction}) => {
+      if (!geneMap[gene]) geneMap[gene] = {files: [], prediction};
+      geneMap[gene].files.push(patientName(r.file));
+    });
+  });
+  const shared = Object.entries(geneMap).filter(([,v]) => v.files.length > 1)
+    .sort((a,b) => b[1].files.length - a[1].files.length);
+  if (!shared.length) return '';
+  return `
+  <div class="panel" style="margin-top:0;border-top:none;">
+    <div class="panel-head"><span class="lbl-dark">Shared Genes · Across Patients</span></div>
+    ${shared.map(([gene, {files, prediction}]) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #F9FAFB;">
+      <span style="font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;background:${prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${prediction==='A'?'#FCA5A5':'#FED7AA'};flex-shrink:0;">${esc(gene)}</span>
+      <span style="font-size:11px;color:#6B7280;">${files.map(f=>esc(f)).join(' · ')}</span>
+      <span style="margin-left:auto;font-size:10px;color:#9CA3AF;">${files.length} patients</span>
+    </div>`).join('')}
   </div>`;
 }
 
@@ -616,10 +721,36 @@ function renderReport(r, level, urgColor, rows) {
 
   // Rarity note
   const rarity=r['Rarity score (A/B community freq)']||0;
-  lines.push(`<p>Rarity score: <strong>${rarity.toFixed(1)}</strong> — mean inverted community frequency across A/B-class variants (higher = rarer variants).</p>`);
+  lines.push(`<p>Rarity score: <strong>${rarity.toFixed(1)}</strong> — mean inverted community frequency across A/B-class variants.</p>`);
+
+  // Classification counts
+  const cc = r.classification_counts||{};
+  const ccTotal = (cc.P||0)+(cc.LP||0)+(cc.VUS||0)+(cc.LB||0)+(cc.B||0);
+  if (ccTotal > 0) {
+    lines.push(`<p>ClinVar: <strong style="color:#DC2626;">${cc.P||0} P</strong> · <strong style="color:#C2410C;">${cc.LP||0} LP</strong> · ${cc.VUS||0} VUS · ${cc.LB||0} LB · ${cc.B||0} B</p>`);
+  }
+
+  // Actionable
+  if ((r.actionable_count||0) > 0) {
+    lines.push(`<p><strong style="color:#DC2626;">${r.actionable_count} actionable variant${r.actionable_count>1?'s':''}</strong> (DDM prediction A) — immediate therapeutic relevance.</p>`);
+  }
+
+  // VAF
+  if (r.vaf_stats && r.vaf_stats.mean != null) {
+    lines.push(`<p>VAF range ${r.vaf_stats.min}–${r.vaf_stats.max}%, mean ${r.vaf_stats.mean}%.</p>`);
+  }
+
+  // Low coverage
+  if ((r.low_coverage_genes||[]).length) {
+    lines.push(`<p><strong style="color:#D97706;">Coverage warning:</strong> ${r.low_coverage_genes.map(g=>g.gene+' ('+g.depth+'×)').join(', ')} below 50× threshold.</p>`);
+  }
+
+  // Indication
+  const ind = indications[r.file];
+  if (ind) lines.push(`<p><strong>Indication:</strong> ${esc(ind)}</p>`);
 
   // Overall
-  lines.push(`<p>Overall priority score: <strong>${overall.toFixed(2)}</strong> (mean of urgency, actionability, QA). ${rows.toLocaleString()} variants analysed.</p>`);
+  lines.push(`<p>Overall priority score: <strong>${overall.toFixed(2)}</strong>. ${rows.toLocaleString()} variants analysed.</p>`);
 
   $('report-body').innerHTML=lines.join('');
   $('rep-meta').textContent=`ROWS ${rows.toLocaleString()} · SCORE ${overall.toFixed(1)}`;
