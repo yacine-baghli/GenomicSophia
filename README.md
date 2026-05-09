@@ -2,6 +2,7 @@ To run the scoring :
 ```bash
 python3 compute_scores.py patient1.csv patient2.csv patient3.csv --output scores.csv
 ```
+You can run up to 10 at the same time (but it is arbitrary)
 
 
 # 🧬 GenomicOracle Co-Pilot
