@@ -1,0 +1,4 @@
+file,Rows analyzed,Disease urgency score,Actionability score (placeholder),QA confidence score,Overall CSV score
+patient1.csv,263,460.0,50.0,35.0,181.7
+patient2.csv,500,2740.0,50.0,11.5,933.8
+patient3.csv,319,3280.0,50.0,31.1,1120.4
