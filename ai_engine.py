@@ -1,6 +1,6 @@
 """
-AI Engine — Scores and ranks genomic cases by 5 clinical metrics.
-Metrics: Actionability, Disease Urgency, QA Confidence, gnomAD Rarity, ClinVar Evidence.
+AI Engine — Scores and ranks genomic cases by 4 clinical metrics.
+Metrics: ABCD Prediction, ClinVar Evidence, Community Frequency, QA Confidence.
 """
 
 import json
@@ -44,7 +44,7 @@ PROGNOSTIC_MARKERS = {
 }
 
 
-# ─── 5-Metric Scoring System ───────────────────────────────────────────────
+# ─── 4-Metric Scoring System ───────────────────────────────────────────────
 
 def _get_field(record, *keys, default=""):
     """Try multiple field names, return first non-empty value."""
@@ -55,46 +55,23 @@ def _get_field(record, *keys, default=""):
     return default
 
 
-def compute_actionability(gene, consequence=""):
-    """Score 0-100: Is there a targeted therapy for this gene/variant?"""
-    gene_upper = str(gene).upper().strip()
-    cons = str(consequence).lower()
-    if gene_upper in ACTIONABLE_GENES:
-        info = ACTIONABLE_GENES[gene_upper]
-        base = 90 if info["tier"] == 1 else 65
-        # Loss-of-function in tumor suppressor = higher actionability
-        if any(kw in cons for kw in ["frameshift", "nonsense", "stop_gained", "splice"]):
-            base = min(100, base + 10)
-        return base, info["therapies"]
-    if gene_upper in PROGNOSTIC_MARKERS:
-        return 30, []
-    return 10, []
-
-
-def compute_disease_urgency(acmg="", abcd="", consequence=""):
-    """Score 0-100: How urgent is this variant based on classification + consequence?"""
+def compute_abcd_score(abcd="", consequence=""):
+    """Score 0-100: SOPHiA ABCD prediction + consequence severity."""
     score = 0
-    acmg_str = str(acmg).lower().strip()
     abcd_str = str(abcd).upper().strip()
+
+    # ABCD predictor is the primary signal
+    abcd_map = {"A": 65, "B": 45, "C": 20, "D": 5}
+    score += abcd_map.get(abcd_str[:1] if abcd_str else "", 10)
+
+    # Consequence severity bonus
     cons = str(consequence).lower()
-
-    # ACMG
-    if "pathogenic" in acmg_str and "likely" not in acmg_str:
-        score += 45
-    elif "likely pathogenic" in acmg_str:
-        score += 30
-    elif "uncertain" in acmg_str:
-        score += 10
-
-    # ABCD predictor
-    abcd_map = {"A": 35, "B": 22, "C": 8, "D": 0}
-    score += abcd_map.get(abcd_str[:1] if abcd_str else "", 0)
-
-    # Consequence severity
     if any(kw in cons for kw in ["nonsense", "frameshift", "stop_gained", "splice"]):
-        score += 20
+        score += 30
     elif "missense" in cons:
-        score += 8
+        score += 12
+    elif "inframe" in cons:
+        score += 5
 
     return min(100, score)
 
@@ -141,23 +118,25 @@ def compute_qa_confidence(read_depth=None, allele_freq=None, abcd=""):
     return max(0, min(100, score))
 
 
-def compute_gnomad_score(gnomad_value):
-    """Score 0-100: Rarity in population (rarer = higher score = more likely pathogenic)."""
+def compute_community_freq_score(community_freq):
+    """Score 0-100: Rarity based on SOPHiA DDM Community Frequency (rarer = higher)."""
     try:
-        val = float(gnomad_value) if gnomad_value is not None else None
-        if val is None or str(gnomad_value).strip() in ("", "—", "-", "N/A"):
-            return 80  # absent from gnomAD = very rare = likely pathogenic
+        val = float(community_freq) if community_freq is not None else None
+        if val is None or str(community_freq).strip() in ("", "—", "-", "N/A"):
+            return 80  # absent = very rare
         if val == 0:
             return 95
-        if val < 0.00001:
-            return 90
-        if val < 0.0001:
-            return 75
         if val < 0.001:
-            return 55
+            return 90
+        if val < 0.005:
+            return 75
         if val < 0.01:
-            return 30
-        return 10  # common variant — likely benign
+            return 60
+        if val < 0.05:
+            return 40
+        if val < 0.10:
+            return 25
+        return 10  # common in community → likely benign/artifact
     except (ValueError, TypeError):
         return 80
 
@@ -193,14 +172,19 @@ def compute_clinvar_score(clinvar_sig, clinvar_review=""):
     return min(100, score)
 
 
+def _get_therapies(gene):
+    """Look up therapies for a gene from the actionable gene database."""
+    gene_upper = str(gene).upper().strip()
+    if gene_upper in ACTIONABLE_GENES:
+        return ACTIONABLE_GENES[gene_upper]["therapies"]
+    return []
+
+
 def score_variant(record):
-    """Compute all 5 metrics for a single variant. Returns dict with scores."""
+    """Compute all 4 metrics for a single variant. Returns dict with scores."""
     gene = str(_get_field(record, "transcriptome.gene.symbol", "gene", "Gene", "GENE")).strip()
     consequence = str(_get_field(record, "short.annotated.transcriptContext.proteinVariant.consequence.sophiaNameSelect",
                                  "Coding consequence", "consequence", "Consequence", "CONSEQUENCE")).strip()
-    acmg = str(_get_field(record, "userAnnotations.interpretation.acmg.result.classificationFinal",
-                           "Pathogenicity Classification", "user_classification",
-                           "clinical_significance", "acmg", "ACMG", "Classification")).strip()
     abcd = str(_get_field(record, "short_predictor.inhouse.predictors.ABCD.result.label",
                            "SOPHiA DDM\u2122 prediction", "SOPHiA DDM prediction",
                            "abcd", "ABCD")).strip()
@@ -208,10 +192,9 @@ def score_variant(record):
                                   "clinvar_significance", "clinvar", "ClinVar", "CLINVAR")).strip()
     clinvar_rev = str(_get_field(record, "short.annotated.catalogs.clinvar.CLNREVSTAT",
                                   "clinvar_review_status", "clinvar_review", "ClinVarReview")).strip()
-    gnomad = _get_field(record, "short.annotated.catalogs.gnomadGenomes.global.global.value",
-                         "short.annotated.catalogs.gnomadExomes.global.global.value",
-                         "gnomAD AF exomes", "gnomAD AF genomes",
-                         "gnomad", "gnomAD", "GNOMAD")
+    community_freq = _get_field(record, "Community frequency",
+                                 "community_frequency", "Account frequency",
+                                 "Account frequency (per application)")
     read_depth = _get_field(record, "short.called.readDepth", "Read depth",
                              "read_depth", "ReadDepth", "DP")
     allele_freq = _get_field(record, "short.called.alleleFrequency", "VAF(%)",
@@ -225,34 +208,32 @@ def score_variant(record):
     in_report = _get_field(record, "userAnnotations.interpretation.inReport.flagged",
                             "in_report", default=False)
 
-    actionability, therapies = compute_actionability(gene, consequence)
-    disease_urgency = compute_disease_urgency(acmg, abcd, consequence)
-    qa_confidence = compute_qa_confidence(read_depth, allele_freq, abcd)
-    gnomad_score = compute_gnomad_score(gnomad)
+    # Compute the 4 metrics
+    abcd_score = compute_abcd_score(abcd, consequence)
     clinvar_score = compute_clinvar_score(clinvar_sig, clinvar_rev)
+    community_score = compute_community_freq_score(community_freq)
+    qa_confidence = compute_qa_confidence(read_depth, allele_freq, abcd)
+    therapies = _get_therapies(gene)
 
-    # Composite score (weighted average)
+    # Composite score (weighted average — 4 metrics)
     composite = int(
-        actionability * 0.30
-        + disease_urgency * 0.30
-        + clinvar_score * 0.20
-        + gnomad_score * 0.10
-        + qa_confidence * 0.10
+        abcd_score * 0.35
+        + clinvar_score * 0.25
+        + community_score * 0.20
+        + qa_confidence * 0.20
     )
 
     # Flags
     flags = []
-    if actionability >= 65:
-        tier = ACTIONABLE_GENES.get(gene.upper(), {}).get("tier", "?")
-        flags.append(f"Tier {tier} actionable ({gene})")
-    if disease_urgency >= 50:
-        flags.append(f"ACMG: {acmg}")
     if abcd and abcd.upper() in ("A", "B"):
         flags.append(f"ABCD: {abcd.upper()}")
     if clinvar_score >= 50:
         flags.append(f"ClinVar: {clinvar_sig}")
-    if gnomad_score >= 80:
-        flags.append("Rare variant")
+    if community_score >= 80:
+        flags.append("Rare in community")
+    if therapies:
+        tier = ACTIONABLE_GENES.get(gene.upper(), {}).get("tier", "?")
+        flags.append(f"Tier {tier} therapies ({gene})")
     if gene.upper() in PROGNOSTIC_MARKERS:
         flags.append(f"Prognostic: {PROGNOSTIC_MARKERS[gene.upper()]}")
 
@@ -261,20 +242,18 @@ def score_variant(record):
         "hgvs": str(hgvs_p or hgvs_c or ""),
         "consequence": consequence,
         "chromosome": str(chrom),
-        "acmg": acmg,
         "abcd": abcd,
         "allele_frequency": str(allele_freq),
         "read_depth": str(read_depth),
         "clinvar": clinvar_sig,
         "clinvar_review": clinvar_rev,
-        "gnomad": str(gnomad),
+        "community_freq": str(community_freq),
         "in_report": in_report,
-        # ─── The 5 Metrics ───
-        "actionability": actionability,
-        "disease_urgency": disease_urgency,
-        "qa_confidence": qa_confidence,
-        "gnomad_score": gnomad_score,
+        # ─── The 4 Metrics ───
+        "abcd_score": abcd_score,
         "clinvar_score": clinvar_score,
+        "community_score": community_score,
+        "qa_confidence": qa_confidence,
         "composite_score": composite,
         # ─── Extras ───
         "therapies": therapies,
@@ -288,18 +267,18 @@ def score_case(variants_list, case_id="unknown"):
         return {
             "case_id": case_id, "case_score": 0, "urgency": "low",
             "urgency_color": "#22c55e", "urgency_label": "🟢 LOW — Routine",
-            "total_variants": 0, "actionable_count": 0, "pathogenic_count": 0,
+            "total_variants": 0, "pathogenic_count": 0,
             "top_genes": [], "top_therapies": [], "flags": [],
-            "avg_actionability": 0, "avg_disease_urgency": 0,
-            "avg_qa_confidence": 0, "avg_gnomad": 0, "avg_clinvar": 0,
+            "avg_abcd": 0, "avg_clinvar": 0,
+            "avg_community": 0, "avg_qa": 0,
             "scored_variants": [],
         }
 
     scored = []
     all_flags, all_therapies = [], []
-    pathogenic_count = actionable_count = 0
+    pathogenic_count = 0
     genes_seen = set()
-    sums = {"act": 0, "urg": 0, "qa": 0, "gno": 0, "cli": 0}
+    sums = {"abcd": 0, "cli": 0, "com": 0, "qa": 0}
 
     for v in variants_list:
         sv = score_variant(v)
@@ -307,23 +286,21 @@ def score_case(variants_list, case_id="unknown"):
         all_flags.extend(sv["flags"])
         all_therapies.extend(sv["therapies"])
         genes_seen.add(sv["gene"])
-        if "pathogenic" in sv["acmg"].lower():
+        if "pathogenic" in sv["clinvar"].lower():
             pathogenic_count += 1
-        if sv["actionability"] >= 50:
-            actionable_count += 1
-        sums["act"] += sv["actionability"]
-        sums["urg"] += sv["disease_urgency"]
-        sums["qa"]  += sv["qa_confidence"]
-        sums["gno"] += sv["gnomad_score"]
-        sums["cli"] += sv["clinvar_score"]
+        sums["abcd"] += sv["abcd_score"]
+        sums["cli"]  += sv["clinvar_score"]
+        sums["com"]  += sv["community_score"]
+        sums["qa"]   += sv["qa_confidence"]
 
     n = len(scored)
     scored.sort(key=lambda x: x["composite_score"], reverse=True)
 
-    # Case-level composite (top variant 50% + average 30% + actionable bonus 20%)
+    # Case-level composite (top variant 50% + average 30% + high-ABCD bonus 20%)
     top = scored[0]["composite_score"] if scored else 0
     avg = sum(s["composite_score"] for s in scored) / n
-    case_score = min(100, int(top * 0.5 + avg * 0.3 + min(actionable_count * 5, 20)))
+    high_abcd_count = sum(1 for s in scored if s["abcd_score"] >= 65)
+    case_score = min(100, int(top * 0.5 + avg * 0.3 + min(high_abcd_count * 5, 20)))
 
     if case_score >= 70:
         urg, col, lab = "critical", "#ef4444", "🔴 CRITICAL — Immediate Review"
@@ -337,16 +314,14 @@ def score_case(variants_list, case_id="unknown"):
     return {
         "case_id": case_id, "case_score": case_score,
         "urgency": urg, "urgency_color": col, "urgency_label": lab,
-        "total_variants": n, "actionable_count": actionable_count,
-        "pathogenic_count": pathogenic_count,
+        "total_variants": n, "pathogenic_count": pathogenic_count,
         "top_genes": list(genes_seen)[:10],
         "top_therapies": list(set(all_therapies))[:8],
         "flags": list(set(all_flags))[:15],
-        "avg_actionability":  int(sums["act"] / n),
-        "avg_disease_urgency": int(sums["urg"] / n),
-        "avg_qa_confidence":  int(sums["qa"] / n),
-        "avg_gnomad":         int(sums["gno"] / n),
-        "avg_clinvar":        int(sums["cli"] / n),
+        "avg_abcd":       int(sums["abcd"] / n),
+        "avg_clinvar":    int(sums["cli"] / n),
+        "avg_community":  int(sums["com"] / n),
+        "avg_qa":         int(sums["qa"] / n),
         "scored_variants": scored,
     }
 
@@ -361,22 +336,16 @@ def rank_cases(cases_dict):
 # ─── CSV Parsing ────────────────────────────────────────────────────────────
 
 def parse_csv_to_cases(csv_text):
-    """
-    Parse a CSV string into cases dict. Supports SOPHiA DDM export format
-    and generic CSV with columns like Sample, Gene, HGVS, etc.
-    Groups rows by 'sample'/'patient' column (or treats all as one case).
-    """
+    """Parse a CSV string into cases dict. Groups rows by sample/patient column."""
     reader = csv.DictReader(StringIO(csv_text))
     cases = {}
     for row in reader:
-        # Determine sample/case id — SOPHiA DDM uses 'sample' and 'patient' columns
         sample = (
             row.get("sample") or row.get("Sample") or row.get("SAMPLE")
             or row.get("patient") or row.get("Patient")
             or row.get("Case") or row.get("case") or row.get("SampleID")
             or "Sample A"
         )
-        # SOPHiA DDM exports often have trailing semicolons in these fields
         sample = str(sample).strip().rstrip(";").strip()
         if not sample:
             sample = "Sample A"
@@ -388,65 +357,73 @@ def parse_csv_to_cases(csv_text):
 
 def get_copilot_system_prompt():
     return """You are an expert Genomic Pathologist AI Co-Pilot integrated into the SOPHiA DDM™ platform.
-Given scored variant data, generate a concise clinical triage summary.
-Output EXACTLY this JSON (no markdown, no backticks):
-{"summary_bullets":["bullet1","bullet2","bullet3","bullet4"],"recommended_action":"1-line action","estimated_review_time":"X min"}
-Be extremely concise and clinical. Reference specific gene and drug names."""
+Given scored variant data for a patient sample, write a concise 2-3 sentence clinical summary describing
+the most clinically significant findings, their implications for patient management, and any relevant
+therapeutic considerations. Be specific about gene names, variant types, and clinical significance.
+Do NOT output JSON. Write plain text only."""
 
 
 def generate_case_summary_llm(scored_case, llm_provider=None, api_key=None):
-    """Generate LLM-powered case summary."""
-    prompt = f"""Case Score: {scored_case['case_score']}/100 ({scored_case['urgency_label']})
-Variants: {scored_case['total_variants']} | Actionable: {scored_case['actionable_count']} | Pathogenic: {scored_case['pathogenic_count']}
-Avg Metrics — Actionability:{scored_case['avg_actionability']} Urgency:{scored_case['avg_disease_urgency']} QA:{scored_case['avg_qa_confidence']} gnomAD:{scored_case['avg_gnomad']} ClinVar:{scored_case['avg_clinvar']}
-Genes: {', '.join(scored_case['top_genes'][:5])}
+    """Generate LLM-powered case summary using Claude/Gemini/GPT."""
+    prompt = f"""Patient Sample: {scored_case['case_id']}
+Case Score: {scored_case['case_score']}/100 ({scored_case['urgency_label']})
+Variants: {scored_case['total_variants']} total, {scored_case['pathogenic_count']} ClinVar-pathogenic
+Avg Metrics — ABCD:{scored_case['avg_abcd']} ClinVar:{scored_case['avg_clinvar']} Community:{scored_case['avg_community']} QA:{scored_case['avg_qa']}
+Top Genes: {', '.join(scored_case['top_genes'][:6])}
 Therapies: {', '.join(scored_case['top_therapies'][:5]) or 'None'}
-Top 5 variants:
+
+Top 5 variants by composite score:
 """
     for v in scored_case["scored_variants"][:5]:
-        prompt += f"  - {v['gene']} {v['hgvs']} | Composite:{v['composite_score']} Act:{v['actionability']} Urg:{v['disease_urgency']} QA:{v['qa_confidence']} ClinVar:{v['clinvar']}\n"
+        prompt += f"  - {v['gene']} {v['hgvs']} ({v['consequence']}) | ABCD:{v['abcd']} Score:{v['composite_score']} ClinVar:{v['clinvar']} CommunityFreq:{v['community_freq']}\n"
 
+    prompt += "\nWrite a 2-3 sentence clinical summary of this sample's key findings."
+
+    # Try providers in order
+    anthropic_key = api_key if llm_provider == "anthropic" else os.environ.get("ANTHROPIC_API_KEY")
     gemini_key = api_key if llm_provider == "gemini" else os.environ.get("GEMINI_API_KEY")
     openai_key = api_key if llm_provider == "openai" else os.environ.get("OPENAI_API_KEY")
-    anthropic_key = api_key if llm_provider == "anthropic" else os.environ.get("ANTHROPIC_API_KEY")
 
     for provider, key, fn in [
+        ("anthropic", anthropic_key, _call_anthropic),
         ("gemini", gemini_key, _call_gemini),
         ("openai", openai_key, _call_openai),
-        ("anthropic", anthropic_key, _call_anthropic),
     ]:
         if key and (not llm_provider or llm_provider == provider):
             try:
-                return fn(key, prompt)
+                text = fn(key, prompt, raw_text=True)
+                return text  # Return raw text, not JSON
             except Exception as e:
                 print(f"{provider} error: {e}")
 
-    return _generate_fallback_summary(scored_case)
+    return None  # No LLM available
 
 
-def _call_gemini(key, prompt):
+def _call_gemini(key, prompt, raw_text=False):
     from google import genai
     from google.genai import types
     client = genai.Client(api_key=key)
     r = client.models.generate_content(
         model="gemini-2.5-flash", contents=prompt,
         config=types.GenerateContentConfig(system_instruction=get_copilot_system_prompt()))
-    return _parse_json(r.text)
+    return r.text.strip() if raw_text else _parse_json(r.text)
 
-def _call_openai(key, prompt):
+def _call_openai(key, prompt, raw_text=False):
     import openai
     client = openai.OpenAI(api_key=key)
     r = client.chat.completions.create(model="gpt-4o", messages=[
         {"role": "system", "content": get_copilot_system_prompt()},
         {"role": "user", "content": prompt}])
-    return _parse_json(r.choices[0].message.content)
+    text = r.choices[0].message.content
+    return text.strip() if raw_text else _parse_json(text)
 
-def _call_anthropic(key, prompt):
+def _call_anthropic(key, prompt, raw_text=False):
     import anthropic
     client = anthropic.Anthropic(api_key=key)
-    r = client.messages.create(model="claude-3-opus-20240229", max_tokens=500,
+    r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=500,
         system=get_copilot_system_prompt(), messages=[{"role": "user", "content": prompt}])
-    return _parse_json(r.content[0].text)
+    text = r.content[0].text
+    return text.strip() if raw_text else _parse_json(text)
 
 def _parse_json(text):
     clean = text.strip()
@@ -459,9 +436,9 @@ def _parse_json(text):
 
 def _generate_fallback_summary(scored_case):
     bullets = []
-    bullets.append(f"{scored_case['total_variants']} variants — {scored_case['pathogenic_count']} pathogenic, {scored_case['actionable_count']} actionable.")
-    ag = [v["gene"] for v in scored_case["scored_variants"] if v["actionability"] >= 50]
-    bullets.append(f"Actionable genes: {', '.join(list(set(ag))[:4]) or 'None'}.")
+    bullets.append(f"{scored_case['total_variants']} variants — {scored_case['pathogenic_count']} ClinVar-pathogenic.")
+    top_abcd = [v["gene"] for v in scored_case["scored_variants"] if v["abcd_score"] >= 65]
+    bullets.append(f"High-confidence ABCD genes: {', '.join(list(set(top_abcd))[:4]) or 'None'}.")
     if scored_case["top_therapies"]:
         bullets.append(f"Consider: {', '.join(scored_case['top_therapies'][:3])}.")
     else:

@@ -20,7 +20,7 @@
 <!-- API Key panel (hidden by default) -->
 <div id="api-key-panel" class="api-key-panel" style="display:none">
  <div class="row" style="align-items:center;gap:.8rem">
-  <div class="field" style="flex:0;min-width:100px"><label>Provider</label><select id="key-provider"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Claude</option></select></div>
+  <div class="field" style="flex:0;min-width:100px"><label>Provider</label><select id="key-provider"><option value="anthropic">Claude</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select></div>
   <div class="field" style="flex:2"><label>API Key</label><input id="api-key-input" type="password" placeholder="Paste your API key here..."></div>
   <button class="btn-primary" onclick="saveApiKey()">💾 Save Key</button>
   <span id="key-status" style="font-size:.78rem;color:var(--text3)"></span>
@@ -43,7 +43,7 @@
     <input type="file" id="csv-files" accept=".csv,.tsv,.txt" multiple>
    </div>
    <button class="btn-secondary" onclick="uploadFiles()" id="btn-upload">⬆ Add Files</button>
-   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm-csv"><option value="none">None</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Claude</option></select></div>
+   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm-csv"><option value="none">None</option><option value="anthropic">Claude</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select></div>
    <button class="btn-primary" onclick="rankAll()" id="btn-rank">🔬 Rank All Cases</button>
   </div>
  </div>
@@ -52,7 +52,7 @@
    <div class="field"><label>Username</label><input id="username" value="hackathon6@hackathon.com"></div>
    <div class="field"><label>Password</label><input id="password" type="password" value="Gono399764"></div>
    <div class="field" style="flex:2"><label>Dataset Keys (one per line)</label><textarea id="dataset-keys" rows="2"></textarea></div>
-   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm"><option value="none">None</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Claude</option></select></div>
+   <div class="field" style="flex:0;min-width:90px"><label>LLM</label><select id="llm"><option value="none">None</option><option value="anthropic">Claude</option><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select></div>
    <button class="btn-primary" onclick="runVQS()">🔍 Analyze</button>
   </div>
  </div>

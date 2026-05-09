@@ -137,4 +137,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .lit-paper-meta{font-size:.7rem;color:var(--text3);margin-top:.25rem}
 .lit-pubmed-link{display:block;text-align:center;padding:.7rem;margin-top:1rem;border-radius:8px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);color:var(--primary);text-decoration:none;font-size:.82rem;font-weight:500;transition:all .2s}
 .lit-pubmed-link:hover{background:rgba(139,92,246,.12);transform:translateY(-1px)}
-
+/* ─── LLM Clinical Summary ──────────────────────────────────────────────── */
+.llm-summary{background:rgba(6,182,212,.04);border:1px solid rgba(6,182,212,.12);border-radius:12px;padding:1rem 1.2rem;margin-bottom:.8rem}
+.llm-summary h4{margin:0 0 .5rem;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--cyan)}
+.llm-summary p{font-size:.84rem;line-height:1.7;color:var(--text2);margin:0}
