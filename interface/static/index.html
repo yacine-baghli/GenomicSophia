@@ -3,428 +3,525 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>SOPHiA DDM™ · Patient Scoring</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>KAIROS · Patient Scoring</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
-  *{box-sizing:border-box;}
-  body{font-family:'Inter',sans-serif;background:#f0f2f8;color:#1a1f36;margin:0;min-height:100vh;}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-size: 13px; overflow: hidden; }
 
-  /* Main */
-  .main{display:flex;flex-direction:column;min-height:100vh;}
+/* ── Top nav ─────────────────────────────────────────────────── */
+.nav { height: 48px; background: #fff; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; flex-shrink: 0; }
+.nav-logo { font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; }
+.nav-about { font-size: 11px; color: #9CA3AF; letter-spacing: .06em; cursor: pointer; }
+.nav-user { display: flex; align-items: center; gap: 8px; }
+.nav-avatar { width: 28px; height: 28px; border-radius: 50%; background: #1D4ED8; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 
-  /* Top bar */
-  .topbar{background:#fff;border-bottom:1px solid #e3e8ef;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
-  .breadcrumb{font-size:11px;color:#e53e3e;font-weight:500;margin-bottom:1px;}
-  .page-title{font-size:17px;font-weight:600;color:#1a1f36;}
+/* ── Layout ──────────────────────────────────────────────────── */
+.layout { display: flex; height: calc(100vh - 48px); }
 
-  /* Content */
-  .content{padding:24px;flex:1;}
-  .grid-2{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start;}
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.sidebar { width: 288px; flex-shrink: 0; background: #fff; border-right: 1px solid #E5E7EB; display: flex; flex-direction: column; }
+.sidebar-head { padding: 13px 18px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
+.sidebar-list { flex: 1; overflow-y: auto; }
 
-  /* Hero card (dark) */
-  .hero-card{background:linear-gradient(135deg,#0d1b4b 0%,#1a3068 50%,#0d2550 100%);border-radius:12px;padding:28px;color:#fff;position:relative;overflow:hidden;min-height:220px;}
-  .hero-card::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(99,102,241,.3) 0%,transparent 70%);}
-  .hero-card::after{content:'';position:absolute;bottom:-30px;left:60px;width:150px;height:150px;background:radial-gradient(circle,rgba(59,130,246,.2) 0%,transparent 70%);}
-  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:#e53e3e;color:#fff;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
-  .hero-title{font-size:22px;font-weight:700;margin-bottom:8px;line-height:1.3;position:relative;z-index:1;}
-  .hero-sub{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:20px;position:relative;z-index:1;}
-  .hero-btn{display:inline-flex;align-items:center;gap:8px;background:#1d6fef;color:#fff;font-size:12px;font-weight:600;padding:8px 18px;border-radius:7px;border:none;cursor:pointer;transition:background .15s;position:relative;z-index:1;}
-  .hero-btn:hover{background:#1558cc;}
+.patient-row { padding: 14px 18px; border-bottom: 1px solid #F3F4F6; cursor: pointer; border-left: 3px solid transparent; transition: background .1s; }
+.patient-row:hover { background: #FAFAFA; }
+.patient-row.active { border-left-color: #111; background: #FAFAFA; }
+.patient-row:last-child { border-bottom: none; }
 
-  /* Drop zone inside hero */
-  .drop-zone{border:2px dashed rgba(255,255,255,.25);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-top:16px;position:relative;z-index:1;}
-  .drop-zone.drag-over{border-color:#60a5fa;background:rgba(96,165,250,.1);}
-  .drop-zone.has-files{border-color:#34d399;background:rgba(52,211,153,.08);}
+.pri-bar { height: 2px; background: #F3F4F6; border-radius: 1px; margin-top: 9px; }
+.pri-fill { height: 100%; background: #111; border-radius: 1px; transition: width .9s cubic-bezier(.4,0,.2,1); width: 0; }
 
-  /* White cards */
-  .card{background:#fff;border-radius:10px;border:1px solid #e3e8ef;overflow:hidden;}
-  .card-header{padding:14px 18px;border-bottom:1px solid #f0f2f8;display:flex;align-items:center;justify-content:space-between;}
-  .card-title{font-size:13px;font-weight:600;color:#1a1f36;}
-  .card-body{padding:18px;}
+/* ── Main ────────────────────────────────────────────────────── */
+.main { flex: 1; overflow-y: auto; }
+.main-inner { padding: 32px 36px; }
 
-  /* Result patient rows */
-  .patient-row{padding:14px 18px;border-bottom:1px solid #f0f2f8;display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:16px;align-items:center;}
-  .patient-row:last-child{border-bottom:none;}
+/* ── Metric cards ────────────────────────────────────────────── */
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid #E5E7EB; margin: 22px 0 0; }
+.metric { background: #fff; padding: 18px 20px; border-right: 1px solid #E5E7EB; }
+.metric:last-child { border-right: none; }
+.metric-val { font-size: 32px; font-weight: 300; letter-spacing: -.02em; color: #111; margin: 6px 0 3px; line-height: 1; }
+.metric-val-text { font-size: 26px; }
 
-  /* Score pill */
-  .score-pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;}
+/* ── Score detail ────────────────────────────────────────────── */
+.panel { background: #fff; border: 1px solid #E5E7EB; margin-top: 18px; }
+.panel-head { padding: 12px 16px; border-bottom: 1px solid #E5E7EB; }
 
-  /* Buttons */
-  .btn-primary{background:#1d6fef;color:#fff;font-size:12px;font-weight:600;padding:7px 16px;border-radius:7px;border:none;cursor:pointer;transition:background .15s;}
-  .btn-primary:hover{background:#1558cc;}
-  .btn-primary:disabled{background:#c3d9fd;cursor:not-allowed;}
-  .btn-link{background:none;border:none;color:#1d6fef;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;}
-  .btn-link:hover{text-decoration:underline;}
+.score-row { display: grid; grid-template-columns: 160px 1fr 60px; gap: 16px; align-items: center; padding: 13px 16px; border-bottom: 1px solid #F3F4F6; }
+.score-row:last-child { border-bottom: none; }
+.score-track { height: 3px; background: #F3F4F6; border-radius: 2px; }
+.score-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(.4,0,.2,1); width: 0; }
 
-  /* Tags */
-  .tag-coming{font-size:10px;color:#e53e3e;font-weight:600;letter-spacing:.3px;}
-  .tag-open{font-size:10px;background:#e8f1ff;color:#1d6fef;font-weight:600;padding:2px 8px;border-radius:4px;}
+/* ── Report panel ────────────────────────────────────────────── */
+.report { width: 300px; flex-shrink: 0; background: #fff; border-left: 1px solid #E5E7EB; display: flex; flex-direction: column; }
+.report-head { padding: 13px 18px; border-bottom: 1px solid #E5E7EB; flex-shrink: 0; }
+.report-body { flex: 1; overflow-y: auto; padding: 18px; font-size: 12px; line-height: 1.75; color: #374151; }
+.report-foot { padding: 14px 16px; border-top: 1px solid #E5E7EB; flex-shrink: 0; }
 
-  /* Bar */
-  .bar-track{height:5px;background:#f0f2f8;border-radius:3px;overflow:hidden;width:120px;}
-  .bar-fill{height:100%;border-radius:3px;width:0%;transition:width 1s cubic-bezier(.4,0,.2,1);}
+/* ── Upload modal ────────────────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.28); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border: 1px solid #E5E7EB; padding: 26px; width: 460px; border-radius: 3px; }
 
-  /* Chips */
-  .chip{display:inline-flex;align-items:center;gap:6px;background:#f0f6ff;border:1px solid #c3d9fd;border-radius:6px;padding:4px 10px;font-size:11px;color:#1d6fef;}
-  .chip-remove{background:none;border:none;color:#6b7ca8;cursor:pointer;font-size:14px;line-height:1;padding:0;}
-  .chip-remove:hover{color:#e53e3e;}
+.drop-zone { border: 1.5px dashed #D1D5DB; border-radius: 3px; padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.drop-zone:hover, .drop-zone.drag-over { border-color: #111; background: #FAFAFA; }
+.drop-zone.has-files { border-color: #10B981; background: #F0FDF4; }
 
-  /* Info card rows */
-  .info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f2f8;font-size:12px;}
-  .info-row:last-child{border-bottom:none;}
+.chip { display: inline-flex; align-items: center; gap: 6px; background: #F0F6FF; border: 1px solid #BFDBFE; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #1D4ED8; }
 
-  /* Spinner */
-  .spin{animation:spin 1s linear infinite;}
-  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn { padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid #D1D5DB; background: #fff; color: #374151; border-radius: 2px; transition: background .1s; letter-spacing: .01em; }
+.btn:hover { background: #F9FAFB; }
+.btn-dark { background: #111; color: #fff; border-color: #111; }
+.btn-dark:hover { background: #333; }
+.btn-dark:disabled { background: #9CA3AF; border-color: #9CA3AF; cursor: not-allowed; }
 
-  /* Fade in */
-  .fade-in{animation:fadeIn .35s ease forwards;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* ── Labels ──────────────────────────────────────────────────── */
+.lbl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #9CA3AF; font-weight: 500; }
+.lbl-dark { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #6B7280; font-weight: 600; }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#f0f2f8}::-webkit-scrollbar-thumb{background:#c3cfe0;border-radius:2px}
+/* ── Misc ────────────────────────────────────────────────────── */
+.fade-in { animation: fi .35s ease; }
+@keyframes fi { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #9CA3AF; text-align: center; padding: 40px; }
 </style>
 </head>
 <body>
 
-<!-- ── Main ──────────────────────────────────────────────────────────────── -->
-<div class="main">
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">KAIROS</div>
+  <div class="nav-about">ABOUT →</div>
+  <div class="nav-user">
+    <div style="text-align:right;">
+      <div class="lbl" style="margin-bottom:1px;">Viewing as</div>
+      <div style="font-size:12px;font-weight:500;">Genetic Expert</div>
+    </div>
+    <div class="nav-avatar">GE</div>
+  </div>
+</nav>
 
-  <!-- Top bar -->
-  <div class="topbar">
-    <div style="display:flex;align-items:center;gap:14px;">
-      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="15" fill="#1d6fef"/>
-        <path d="M10 16h4l3-6 3 12 2-6h4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <div style="width:1px;height:28px;background:#e3e8ef;"></div>
-      <div>
-        <div class="breadcrumb">Patient Scoring</div>
-        <div class="page-title">CSV Analysis</div>
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span class="lbl" id="inbox-lbl">INBOX · 0 AWAITING REVIEW</span>
+      <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="showModal()">+ Upload</button>
+    </div>
+    <div class="sidebar-list" id="sidebar-list">
+      <div class="empty-state" style="height:auto;padding:40px 20px;">
+        <div style="font-size:12px;margin-bottom:4px;">No patients scored yet</div>
+        <div style="font-size:11px;">Click + Upload to begin</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div style="font-size:12px;color:#6b7ca8;">compute_scores.py</div>
-      <div style="width:28px;height:28px;border-radius:50%;background:#e53e3e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">H6</div>
+  </aside>
+
+  <!-- Main detail -->
+  <div class="main" id="main">
+    <div class="empty-state" id="empty-main">
+      <div style="font-size:15px;font-weight:300;color:#6B7280;margin-bottom:4px;">Select a patient from the inbox</div>
+      <div style="font-size:12px;">or click + Upload to score new CSVs</div>
+    </div>
+    <div id="detail" style="display:none;"></div>
+  </div>
+
+  <!-- Report panel -->
+  <div class="report" id="report-panel" style="display:none;">
+    <div class="report-head">
+      <span class="lbl">AUTO-DRAFTED REPORT · REPORTWRITER</span>
+    </div>
+    <div class="report-body" id="report-body"></div>
+    <div class="report-foot">
+      <div style="display:flex;gap:5px;margin-bottom:8px;font-size:10px;color:#9CA3AF;">
+        <span id="rep-meta"></span>
+      </div>
+      <div style="display:flex;gap:5px;">
+        <button class="btn btn-dark" style="flex:1;font-size:11px;">Send to MD</button>
+        <button class="btn" style="font-size:11px;">Edit</button>
+        <button class="btn" style="font-size:11px;">PDF</button>
+      </div>
     </div>
   </div>
 
-  <!-- Content -->
-  <div class="content">
-    <div class="grid-2">
+</div>
 
-      <!-- Left column -->
-      <div style="display:flex;flex-direction:column;gap:20px;">
+<!-- Upload modal -->
+<div class="overlay" id="modal" style="display:none;" onclick="if(event.target===this)hideModal()">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span class="lbl-dark">Upload Variant CSVs</span>
+      <button onclick="hideModal()" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:18px;line-height:1;">&times;</button>
+    </div>
 
-        <!-- Hero upload card -->
-        <div class="hero-card">
-          <div class="hero-badge">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            CSV Scoring
-          </div>
-          <div class="hero-title">Patient Variant Scoring</div>
-          <div class="hero-sub">Upload variant table CSVs to compute disease urgency, actionability, and QA confidence scores using SOPHiA DDM™ analytics.</div>
+    <div id="drop-zone" class="drop-zone"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" stroke-width="1.5" style="margin:0 auto 10px;display:block;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+      <div id="drop-label" style="font-size:12px;color:#6B7280;margin-bottom:3px;">Drag &amp; drop variant CSVs, or click to browse</div>
+      <div style="font-size:11px;color:#D1D5DB;">Up to 10 files · .csv .tsv</div>
+    </div>
+    <input id="file-input" type="file" accept=".csv,.tsv" multiple style="display:none" onchange="onFileSelect(event)"/>
 
-          <div id="drop-zone" class="drop-zone"
-            onclick="document.getElementById('file-input').click()"
-            ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,.5)" stroke-width="1.5" style="margin:0 auto 8px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
-            </svg>
-            <p id="drop-label" style="font-size:13px;color:rgba(255,255,255,.8);margin:0 0 4px;">Drag &amp; drop variant CSVs, or click to browse</p>
-            <p style="font-size:11px;color:rgba(255,255,255,.4);margin:0;">Up to 10 files · .csv .tsv</p>
-          </div>
-          <input id="file-input" type="file" accept=".csv,.tsv" multiple class="hidden" onchange="onFileSelect(event)"/>
+    <div id="chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:0;"></div>
 
-          <!-- File chips -->
-          <div id="file-chips" style="display:none;margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:1;"></div>
+    <div id="modal-err" style="display:none;font-size:11px;color:#EF4444;margin-top:10px;"></div>
 
-          <div style="margin-top:16px;display:flex;gap:10px;align-items:center;position:relative;z-index:1;">
-            <button id="run-btn" onclick="runScoring()" disabled class="hero-btn" style="opacity:.45;cursor:not-allowed;">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
-              </svg>
-              Run Scoring
-            </button>
-            <div id="run-spinner" style="display:none;color:rgba(255,255,255,.6);font-size:12px;display:flex;align-items:center;gap:6px;">
-              <svg class="spin" width="14" height="14" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-              </svg>
-              Analysing…
-            </div>
-            <div id="run-error" style="display:none;font-size:12px;color:#fca5a5;"></div>
-          </div>
-        </div>
-
-        <!-- Results table -->
-        <div id="results-section" style="display:none;">
-          <div class="card fade-in">
-            <div class="card-header">
-              <span class="card-title">Results — ranked by Overall Score</span>
-              <span id="result-count" style="font-size:11px;color:#6b7ca8;"></span>
-            </div>
-
-            <!-- Column headers -->
-            <div style="display:grid;grid-template-columns:32px 1fr 110px 90px 90px 110px;gap:12px;padding:8px 18px;background:#f8f9fc;border-bottom:1px solid #e3e8ef;">
-              <div></div>
-              <div style="font-size:10px;font-weight:600;color:#6b7ca8;text-transform:uppercase;letter-spacing:.5px;">Patient / File</div>
-              <div style="font-size:10px;font-weight:600;color:#6b7ca8;text-transform:uppercase;letter-spacing:.5px;text-align:center;">Urgency</div>
-              <div style="font-size:10px;font-weight:600;color:#6b7ca8;text-transform:uppercase;letter-spacing:.5px;text-align:center;">Action.</div>
-              <div style="font-size:10px;font-weight:600;color:#6b7ca8;text-transform:uppercase;letter-spacing:.5px;text-align:center;">QA</div>
-              <div style="font-size:10px;font-weight:600;color:#6b7ca8;text-transform:uppercase;letter-spacing:.5px;text-align:center;">Overall</div>
-            </div>
-
-            <div id="result-rows"></div>
-          </div>
-        </div>
-
-      </div><!-- /left -->
-
-      <!-- Right column -->
-      <div style="display:flex;flex-direction:column;gap:16px;">
-
-        <!-- Scoring method card -->
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Scoring Method</span>
-            <span class="tag-open">compute_scores.py</span>
-          </div>
-          <div class="card-body" style="padding:0;">
-            <div class="info-row" style="padding:12px 18px;">
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#1a1f36;margin-bottom:2px;">Disease Urgency</div>
-                <div style="font-size:11px;color:#6b7ca8;">Col 2 ABCD → A=100, B/C=20, D=0 · sum all rows</div>
-              </div>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#e53e3e" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-            </div>
-            <div class="info-row" style="padding:12px 18px;">
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#1a1f36;margin-bottom:2px;">Actionability</div>
-                <div style="font-size:11px;color:#6b7ca8;">Placeholder · 50.0 per dataset</div>
-              </div>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div class="info-row" style="padding:12px 18px;">
-              <div>
-                <div style="font-size:12px;font-weight:600;color:#1a1f36;margin-bottom:2px;">QA Confidence</div>
-                <div style="font-size:11px;color:#6b7ca8;">Read depth → normalise 0–100 · mean of rows</div>
-              </div>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#1d6fef" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <div style="padding:12px 18px;background:#f8f9fc;border-top:1px solid #f0f2f8;">
-              <div style="font-size:11px;color:#6b7ca8;">Overall = average of the three scores above</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Summary stats (shown after scoring) -->
-        <div id="summary-card" style="display:none;" class="card fade-in">
-          <div class="card-header">
-            <span class="card-title">Summary</span>
-          </div>
-          <div class="card-body" style="padding:0;">
-            <div id="summary-rows"></div>
-          </div>
-        </div>
-
-        <!-- Need help card -->
-        <div class="card">
-          <div class="card-header" style="justify-content:flex-start;gap:10px;">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#1d6fef" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="#1d6fef"/>
-            </svg>
-            <span class="card-title">Need help?</span>
-            <button class="btn-primary" style="margin-left:auto;">Contact us</button>
-          </div>
-        </div>
-
-        <!-- Follow us -->
-        <div style="font-size:11px;color:#6b7ca8;padding:4px 2px;display:flex;align-items:center;gap:12px;">
-          <span>Follow us</span>
-          <span style="color:#1d6fef;cursor:pointer;">sophiagenetics.com ↗</span>
-          <span style="display:flex;gap:8px;">
-            <svg width="14" height="14" fill="#6b7ca8" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            <svg width="14" height="14" fill="#6b7ca8" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-          </span>
-        </div>
-
-      </div><!-- /right -->
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;align-items:center;">
+      <div id="run-spin" style="display:none;font-size:11px;color:#6B7280;display:none;align-items:center;gap:6px;">
+        <svg class="spin" width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#9CA3AF" stroke-width="3"/><path fill="#6B7280" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        Scoring…
+      </div>
+      <button class="btn" onclick="hideModal()">Cancel</button>
+      <button class="btn btn-dark" id="run-btn" onclick="runScoring()" disabled>Score Patients</button>
     </div>
   </div>
 </div>
 
 <script>
+// ── State ─────────────────────────────────────────────────────
 let selectedFiles = [];
+let allResults = [];   // scored results from API
+let selectedIdx = null;
 
-// ── Drag / drop ──────────────────────────────────────────────────────────
-function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
-function onDragLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
-function onDrop(e) { e.preventDefault(); onDragLeave(); attachFiles([...e.dataTransfer.files].filter(f => f.name.match(/\.(csv|tsv)$/i))); }
-function onFileSelect(e) { attachFiles([...e.target.files]); e.target.value = ''; }
+// ── Helpers ───────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(n){ return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1}); }
 
-function attachFiles(newFiles) {
-  newFiles.forEach(f => { if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f); });
-  if (selectedFiles.length > 10) selectedFiles = selectedFiles.slice(0, 10);
+function urgencyLevel(score, max) {
+  const pct = max > 0 ? score / max : 0;
+  if (pct >= 0.75) return 'CRITICAL';
+  if (pct >= 0.4)  return 'HIGH';
+  if (pct >= 0.15) return 'MED';
+  return 'LOW';
+}
+function urgencyColor(level) {
+  return {CRITICAL:'#EF4444',HIGH:'#F97316',MED:'#EAB308',LOW:'#10B981'}[level] || '#9CA3AF';
+}
+function priBadgeClass(level) {
+  return {CRITICAL:'color:#111;font-weight:700',HIGH:'color:#374151;font-weight:600',MED:'color:#6B7280;font-weight:500',LOW:'color:#9CA3AF'}[level]||'';
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function showModal() { selectedFiles=[]; renderChips(); $('modal').style.display='flex'; $('modal-err').style.display='none'; }
+function hideModal() { $('modal').style.display='none'; }
+
+function onDragOver(e) { e.preventDefault(); $('drop-zone').classList.add('drag-over'); }
+function onDragLeave() { $('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); onDragLeave(); attachFiles([...e.dataTransfer.files].filter(f=>f.name.match(/\.(csv|tsv)$/i))); }
+function onFileSelect(e) { attachFiles([...e.target.files]); e.target.value=''; }
+
+function attachFiles(files) {
+  files.forEach(f => { if (!selectedFiles.find(x=>x.name===f.name)) selectedFiles.push(f); });
+  if (selectedFiles.length > 10) selectedFiles = selectedFiles.slice(0,10);
   renderChips();
 }
-
-function removeFile(name) { selectedFiles = selectedFiles.filter(f => f.name !== name); renderChips(); }
+function removeFile(name) { selectedFiles=selectedFiles.filter(f=>f.name!==name); renderChips(); }
 
 function renderChips() {
-  const zone  = document.getElementById('drop-zone');
-  const chips = document.getElementById('file-chips');
-  const btn   = document.getElementById('run-btn');
-  const label = document.getElementById('drop-label');
-
-  chips.innerHTML = '';
-
+  const zone=$('drop-zone'), btn=$('run-btn'), lbl=$('drop-label'), chips=$('chips');
   if (!selectedFiles.length) {
     zone.classList.remove('has-files');
-    chips.style.display = 'none';
-    label.textContent = 'Drag & drop variant CSVs, or click to browse';
-    btn.disabled = true;
-    btn.style.opacity = '.45';
-    btn.style.cursor  = 'not-allowed';
-    return;
+    chips.innerHTML='';
+    lbl.textContent='Drag & drop variant CSVs, or click to browse';
+    btn.disabled=true; return;
   }
-
   zone.classList.add('has-files');
-  label.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected — click to add more`;
-  chips.style.display = 'flex';
-  chips.innerHTML = selectedFiles.map(f => `
+  lbl.textContent=`${selectedFiles.length} file${selectedFiles.length>1?'s':''} ready — click to add more`;
+  chips.innerHTML=selectedFiles.map(f=>`
     <div class="chip">
-      <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      </svg>
+      <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       <span>${esc(f.name)}</span>
-      <span style="color:#6b7ca8;font-size:10px;">${fmt(f.size)}</span>
-      <button class="chip-remove" onclick="removeFile('${esc(f.name)}')">&times;</button>
+      <span style="color:#93C5FD;font-size:10px;">${(f.size/1024).toFixed(0)}KB</span>
+      <button onclick="removeFile('${esc(f.name)}')" style="background:none;border:none;cursor:pointer;color:#93C5FD;font-size:13px;line-height:1;padding:0 0 0 2px;">&times;</button>
     </div>`).join('');
-
-  btn.disabled = false;
-  btn.style.opacity = '1';
-  btn.style.cursor  = 'pointer';
+  btn.disabled=false;
 }
 
-// ── Scoring ───────────────────────────────────────────────────────────────
+// ── Score ─────────────────────────────────────────────────────
 async function runScoring() {
-  const errEl = document.getElementById('run-error');
-  const spin  = document.getElementById('run-spinner');
-  const btn   = document.getElementById('run-btn');
-  errEl.style.display = 'none';
-  spin.style.display  = 'flex';
-  btn.disabled = true;
-  btn.style.opacity = '.45';
+  $('modal-err').style.display='none';
+  $('run-btn').disabled=true;
+  $('run-spin').style.display='flex';
 
-  const fd = new FormData();
-  selectedFiles.forEach(f => fd.append('files', f));
+  const fd=new FormData();
+  selectedFiles.forEach(f=>fd.append('files',f));
 
   try {
-    const res = await fetch('/api/score', { method: 'POST', body: fd });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    renderResults(data.results);
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
+    const res=await fetch('/api/score',{method:'POST',body:fd});
+    if(!res.ok) throw new Error(await res.text());
+    const data=await res.json();
+    allResults=[...allResults,...data.results];
+    allResults.sort((a,b)=>(b['Overall CSV score']||0)-(a['Overall CSV score']||0));
+    // Deduplicate by filename
+    allResults=allResults.filter((r,i)=>allResults.findIndex(x=>x.file===r.file)===i);
+    renderSidebar();
+    hideModal();
+    if(allResults.length) selectPatient(0);
+  } catch(e) {
+    $('modal-err').textContent=e.message.slice(0,200);
+    $('modal-err').style.display='block';
   } finally {
-    spin.style.display = 'none';
-    btn.disabled = false;
-    btn.style.opacity = '1';
+    $('run-btn').disabled=false;
+    $('run-spin').style.display='none';
   }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
-function renderResults(results) {
-  const maxUrgency = Math.max(...results.map(r => r['Disease urgency score'] || 0), 1);
+// ── Sidebar ───────────────────────────────────────────────────
+function renderSidebar() {
+  $('inbox-lbl').textContent=`INBOX · ${allResults.length} AWAITING REVIEW`;
+  if(!allResults.length){
+    $('sidebar-list').innerHTML=`<div class="empty-state" style="height:auto;padding:40px 20px;"><div style="font-size:12px;">No patients scored</div></div>`;
+    return;
+  }
+  const maxUrgency=Math.max(...allResults.map(r=>r['Disease urgency score']||0),1);
+  const maxOverall=Math.max(...allResults.map(r=>r['Overall CSV score']||0),1);
 
-  document.getElementById('results-section').style.display = 'block';
-  document.getElementById('result-count').textContent = `${results.length} file${results.length !== 1 ? 's' : ''} scored`;
-
-  document.getElementById('result-rows').innerHTML = results.map((r, i) => {
-    if (r.error) return `
-      <div class="patient-row" style="grid-template-columns:32px 1fr;">
-        ${rankDot(i)} <span style="font-size:12px;color:#e53e3e;">${esc(r.file)} — ${esc(r.error)}</span>
-      </div>`;
-
-    const urgency  = r['Disease urgency score']            ?? 0;
-    const action   = r['Actionability score (placeholder)'] ?? 0;
-    const qa       = r['QA confidence score']              ?? 0;
-    const overall  = r['Overall CSV score']                ?? 0;
-    const rows     = r['Rows analyzed']                    ?? 0;
-
-    const urgencyPct = Math.min((urgency / maxUrgency) * 100, 100).toFixed(1);
-    const qaPct      = Math.min(qa, 100).toFixed(1);
-    const overallColor = overall > 5000 ? '#e53e3e' : overall > 1000 ? '#f97316' : overall > 300 ? '#eab308' : '#10b981';
-
+  $('sidebar-list').innerHTML=allResults.map((r,i)=>{
+    const overall=r['Overall CSV score']||0;
+    const urgency=r['Disease urgency score']||0;
+    const level=urgencyLevel(urgency,maxUrgency);
+    const pct=Math.min((overall/maxOverall)*100,100);
+    const name=patientName(r.file);
+    const caseId='NX-'+String(i+2418);
     return `
-    <div class="patient-row" style="animation:fadeIn .3s ease ${i * .07}s both;">
-      ${rankDot(i)}
+    <div class="patient-row ${selectedIdx===i?'active':''}" onclick="selectPatient(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="min-width:0;">
+          <div class="lbl" style="margin-bottom:2px;">${caseId}</div>
+          <div style="font-size:15px;font-weight:300;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)}</div>
+        </div>
+        <span style="font-size:10px;letter-spacing:.1em;flex-shrink:0;margin-left:8px;${priBadgeClass(level)}">${level}</span>
+      </div>
+      <div class="pri-bar">
+        <div class="pri-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <div style="text-align:right;font-size:12px;font-weight:500;color:#374151;margin-top:2px;">${overall.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+}
+
+function patientName(filename) {
+  return filename.replace(/\.(csv|tsv)$/i,'').replace(/_/g,' ');
+}
+
+// ── Detail ────────────────────────────────────────────────────
+function selectPatient(idx) {
+  selectedIdx=idx;
+  renderSidebar();
+  const r=allResults[idx];
+  if(!r) return;
+
+  $('empty-main').style.display='none';
+  $('detail').style.display='block';
+  $('report-panel').style.display='flex';
+
+  const maxUrgency=Math.max(...allResults.map(x=>x['Disease urgency score']||0),1);
+  const overall=r['Overall CSV score']||0;
+  const urgency=r['Disease urgency score']||0;
+  const action=r['Actionability score (placeholder)']||0;
+  const qa=r['QA confidence score']||0;
+  const rows=r['Rows analyzed']||0;
+  const level=urgencyLevel(urgency,maxUrgency);
+  const urgColor=urgencyColor(level);
+  const name=patientName(r.file);
+  const caseId='NX-'+String(idx+2418);
+
+  // Normalize scores for bars (relative to plausible max)
+  const urgPct=Math.min((urgency/maxUrgency)*100,100);
+  const actPct=Math.min(action,100);
+  const qaPct=Math.min(qa,100);
+
+  $('detail').innerHTML=`
+  <div class="main-inner fade-in">
+
+    <!-- Header -->
+    <div class="lbl" style="margin-bottom:10px;">CASE · ${caseId} · VARIANT PANEL</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div>
-        <div style="font-size:13px;font-weight:600;color:#1a1f36;">${esc(r.file)}</div>
-        <div style="font-size:11px;color:#6b7ca8;">${rows} rows analysed</div>
+        <h1 style="font-size:30px;font-weight:300;letter-spacing:-.01em;color:#111;line-height:1.1;margin-bottom:4px;">${esc(name)}</h1>
+        <div style="font-size:12px;color:#9CA3AF;">${rows.toLocaleString()} variants analysed · ${esc(r.file)}</div>
       </div>
-      <div style="text-align:center;">
-        <div style="font-size:13px;font-weight:700;color:#e53e3e;margin-bottom:4px;">${urgency.toFixed(1)}</div>
-        <div class="bar-track" style="margin:0 auto;">
-          <div class="bar-fill" style="background:#e53e3e;" data-w="${urgencyPct}"></div>
+      <div style="display:flex;gap:6px;flex-shrink:0;margin-left:20px;">
+        <button class="btn" onclick="showModal()">Upload More</button>
+        <button class="btn btn-dark">Finalize report</button>
+      </div>
+    </div>
+
+    ${r.error ? `<div style="margin-top:16px;padding:12px 14px;border:1px solid #FCA5A5;background:#FEF2F2;font-size:12px;color:#DC2626;border-radius:2px;">${esc(r.error)}</div>` : ''}
+
+    <!-- 4 metric cards -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="lbl">Priority</div>
+        <div class="metric-val">${overall.toFixed(0)}</div>
+        <div class="lbl" style="color:#D1D5DB;">composite</div>
+      </div>
+      <div class="metric">
+        <div class="lbl">Actionability</div>
+        <div class="metric-val">${actPct.toFixed(0)}%</div>
+        <div style="font-size:11px;color:#6B7280;">placeholder score</div>
+      </div>
+      <div class="metric">
+        <div class="lbl">Disease Urgency</div>
+        <div class="metric-val metric-val-text" style="color:${urgColor};">${level}</div>
+        <div style="font-size:11px;color:#6B7280;">${urgency.toFixed(0)} raw score</div>
+      </div>
+      <div class="metric">
+        <div class="lbl">QA Confidence</div>
+        <div class="metric-val">${qa.toFixed(0)}%</div>
+        <div style="font-size:11px;color:#6B7280;">read-depth normalised</div>
+      </div>
+    </div>
+
+    <!-- Score breakdown -->
+    <div class="panel" style="margin-top:20px;">
+      <div class="panel-head">
+        <span class="lbl-dark">Score Breakdown · compute_scores.py</span>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Disease Urgency</div>
+          <div style="font-size:11px;color:#9CA3AF;">Col 2 ABCD: A=100, B/C=20, D=0 · summed across all rows</div>
         </div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:13px;font-weight:700;color:#10b981;">${action.toFixed(1)}</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:13px;font-weight:700;color:#1d6fef;margin-bottom:4px;">${qa.toFixed(1)}</div>
-        <div class="bar-track" style="margin:0 auto;">
-          <div class="bar-fill" style="background:#1d6fef;" data-w="${qaPct}"></div>
+        <div class="score-track">
+          <div class="score-fill" style="background:#EF4444;" data-w="${urgPct.toFixed(1)}"></div>
         </div>
+        <div style="font-size:13px;font-weight:600;color:#EF4444;text-align:right;">${urgency.toFixed(1)}</div>
       </div>
-      <div style="text-align:center;">
-        <span class="score-pill" style="background:${overallColor}18;color:${overallColor};">${overall.toFixed(1)}</span>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Actionability</div>
+          <div style="font-size:11px;color:#9CA3AF;">Placeholder score · 50.0 per dataset</div>
+        </div>
+        <div class="score-track">
+          <div class="score-fill" style="background:#10B981;" data-w="${actPct.toFixed(1)}"></div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:#10B981;text-align:right;">${action.toFixed(1)}</div>
       </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">QA Confidence</div>
+          <div style="font-size:11px;color:#9CA3AF;">Mean read depth normalised 0–100</div>
+        </div>
+        <div class="score-track">
+          <div class="score-fill" style="background:#1D4ED8;" data-w="${qaPct.toFixed(1)}"></div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:#1D4ED8;text-align:right;">${qa.toFixed(1)}</div>
+      </div>
+
+      <div style="padding:12px 16px;background:#FAFAFA;border-top:1px solid #F3F4F6;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:#6B7280;">Overall = mean of three scores</span>
+        <span style="font-size:15px;font-weight:600;color:#111;">${overall.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <!-- All patients comparison -->
+    ${allResults.length > 1 ? renderComparison(idx, maxUrgency) : ''}
+
+  </div>`;
+
+  // Animate bars
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#detail .score-fill').forEach(b=>{
+      b.style.width=(b.dataset.w||0)+'%';
+    });
+    document.querySelectorAll('#detail .pri-fill').forEach(b=>{
+      b.style.width=(b.dataset.w||0)+'%';
+    });
+  });
+
+  renderReport(r, level, urgColor, rows);
+}
+
+function renderComparison(activeIdx, maxUrgency) {
+  const maxOverall=Math.max(...allResults.map(r=>r['Overall CSV score']||0),1);
+  const rows=allResults.map((r,i)=>{
+    const overall=r['Overall CSV score']||0;
+    const urgency=r['Disease urgency score']||0;
+    const qa=r['QA confidence score']||0;
+    const level=urgencyLevel(urgency,maxUrgency);
+    const pct=Math.min((overall/maxOverall)*100,100);
+    const isActive=i===activeIdx;
+    return `
+    <div style="display:grid;grid-template-columns:22px 1fr 80px 70px 70px;gap:14px;align-items:center;padding:11px 16px;border-bottom:1px solid #F3F4F6;${isActive?'background:#FAFAFA;':''}" onclick="selectPatient(${i})" style="cursor:pointer">
+      <div style="font-size:11px;font-weight:600;color:#9CA3AF;">${i+1}</div>
+      <div style="font-size:12px;font-weight:${isActive?'600':'400'};color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(patientName(r.file))}</div>
+      <div style="font-size:11px;color:${urgencyColor(level)};font-weight:600;text-align:center;">${level}</div>
+      <div style="font-size:11px;color:#6B7280;text-align:right;">${qa.toFixed(0)}%</div>
+      <div style="font-size:12px;font-weight:600;color:#111;text-align:right;">${overall.toFixed(1)}</div>
     </div>`;
   }).join('');
 
-  // Animate bars
-  requestAnimationFrame(() => {
-    results.forEach((_, i) => setTimeout(() => {
-      document.querySelectorAll(`#result-rows .bar-fill`).forEach(b => {
-        if (!b.dataset.animated) { b.style.width = (b.dataset.w || 0) + '%'; b.dataset.animated = '1'; }
-      });
-    }, i * 60 + 100));
-  });
+  return `
+  <div class="panel">
+    <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="lbl-dark">All Patients · Ranked</span>
+      <span class="lbl">${allResults.length} total</span>
+    </div>
+    <div style="display:grid;grid-template-columns:22px 1fr 80px 70px 70px;gap:14px;padding:8px 16px;background:#FAFAFA;border-bottom:1px solid #E5E7EB;">
+      <div></div>
+      <div class="lbl">Patient</div>
+      <div class="lbl" style="text-align:center;">Urgency</div>
+      <div class="lbl" style="text-align:right;">QA</div>
+      <div class="lbl" style="text-align:right;">Score</div>
+    </div>
+    ${rows}
+  </div>`;
+}
 
-  // Summary card
-  const best = results[0];
-  if (best && !best.error) {
-    document.getElementById('summary-card').style.display = 'block';
-    document.getElementById('summary-rows').innerHTML = `
-      <div class="info-row" style="padding:10px 18px;">
-        <span style="font-size:12px;color:#6b7ca8;">Highest priority</span>
-        <span style="font-size:12px;font-weight:600;">${esc(best.file)}</span>
-      </div>
-      <div class="info-row" style="padding:10px 18px;">
-        <span style="font-size:12px;color:#6b7ca8;">Top overall score</span>
-        <span style="font-size:12px;font-weight:700;color:#e53e3e;">${(best['Overall CSV score'] ?? 0).toFixed(1)}</span>
-      </div>
-      <div class="info-row" style="padding:10px 18px;">
-        <span style="font-size:12px;color:#6b7ca8;">Files scored</span>
-        <span style="font-size:12px;font-weight:600;">${results.length}</span>
-      </div>`;
+// ── Report ────────────────────────────────────────────────────
+function renderReport(r, level, urgColor, rows) {
+  const overall=r['Overall CSV score']||0;
+  const urgency=r['Disease urgency score']||0;
+  const qa=r['QA confidence score']||0;
+  const name=patientName(r.file);
+
+  const lines=[];
+
+  // Urgency finding
+  if(level==='CRITICAL'){
+    lines.push(`<p><strong>Critical urgency.</strong> ${esc(name)} — highest disease urgency score in cohort (${urgency.toFixed(0)}). Immediate multidisciplinary review recommended.</p>`);
+  } else if(level==='HIGH'){
+    lines.push(`<p><strong>High urgency.</strong> ${esc(name)} shows elevated disease urgency (${urgency.toFixed(0)}). Expedited clinical review indicated.</p>`);
+  } else if(level==='MED'){
+    lines.push(`<p><strong>Intermediate urgency.</strong> Disease urgency score ${urgency.toFixed(0)} — standard review timeline appropriate.</p>`);
+  } else {
+    lines.push(`<p><strong>Low urgency.</strong> Disease urgency score ${urgency.toFixed(0)} — indolent clinical presentation.</p>`);
   }
-}
 
-function rankDot(r) {
-  const colors = ['#f6ad55','#a0aec0','#fc8181'];
-  const c = colors[r] || '#e2e8f0';
-  return `<div style="width:28px;height:28px;border-radius:50%;background:${c}22;border:2px solid ${c};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${c};flex-shrink:0;">${r+1}</div>`;
-}
+  // QA note
+  if(qa>=80){
+    lines.push(`<p>QA confidence is high (${qa.toFixed(0)}%) — sequencing quality supports reliable variant calling.</p>`);
+  } else if(qa>=50){
+    lines.push(`<p>QA confidence is moderate (${qa.toFixed(0)}%) — interpret findings with standard caution.</p>`);
+  } else {
+    lines.push(`<p><strong style="color:#F59E0B;">QA concern.</strong> Confidence ${qa.toFixed(0)}% — verify coverage in key gene regions before clinical action.</p>`);
+  }
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmt(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+  // Actionability placeholder
+  lines.push(`<p>Actionability scoring is in development — placeholder value shown. Full therapy mapping will be available in v2.</p>`);
+
+  // Overall
+  lines.push(`<p>Overall priority score: <strong>${overall.toFixed(2)}</strong> (mean of urgency, actionability, QA). ${rows.toLocaleString()} variants analysed.</p>`);
+
+  $('report-body').innerHTML=lines.join('');
+  $('rep-meta').textContent=`ROWS ${rows.toLocaleString()} · SCORE ${overall.toFixed(1)}`;
+}
 </script>
 </body>
 </html>
