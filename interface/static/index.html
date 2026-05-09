@@ -377,6 +377,7 @@ function renderSidebar() {
           <div class="lbl" style="margin-bottom:2px;">${caseId}</div>
           <div style="font-size:15px;font-weight:300;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
           <div style="font-size:11px;color:#9CA3AF;margin-top:2px;">★ ${esc(r.file)}</div>
+          ${(r.top_genes||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;">${(r.top_genes||[]).slice(0,3).map(g=>`<span style="font-size:9px;font-weight:600;letter-spacing:.03em;padding:1px 5px;border-radius:2px;background:${g.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${g.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${g.prediction==='A'?'#FCA5A5':'#FED7AA'};">${esc(g.gene)}</span>`).join('')}</div>` : ''}
         </div>
         <span style="font-size:10px;letter-spacing:.1em;flex-shrink:0;margin-left:8px;${priBadgeClass(level)}">${level}</span>
       </div>
@@ -429,6 +430,14 @@ function selectPatient(idx) {
       <div>
         <h1 style="font-size:30px;font-weight:300;letter-spacing:-.01em;color:#111;line-height:1.1;margin-bottom:4px;">${esc(name)}</h1>
         <div style="font-size:12px;color:#9CA3AF;">${rows.toLocaleString()} variants analysed · ${esc(r.file)}</div>
+        ${(r.top_genes||[]).length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;">
+          ${(r.top_genes||[]).map(g=>`
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:2px;background:${g.prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${g.prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${g.prediction==='A'?'#FCA5A5':'#FED7AA'};">
+              ${esc(g.gene)}
+              <span style="font-size:9px;opacity:.7;">${g.prediction}</span>
+            </span>`).join('')}
+        </div>` : ''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;margin-left:20px;">
         <button class="btn" onclick="showModal()">Upload More</button>

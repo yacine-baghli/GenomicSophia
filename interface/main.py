@@ -64,9 +64,10 @@ async def score(files: List[UploadFile] = File(...)):
                 "error": str(e),
                 "Rows analyzed": 0,
                 "Disease urgency score": 0,
-                "Actionability score (placeholder)": 0,
+                "Rarity score (A/B community freq)": 0,
                 "QA confidence score": 0,
-                "Overall CSV score": 0,
+                "Overall patient score": 0,
+                "top_genes": [],
             }
         finally:
             tmp_path.unlink(missing_ok=True)
