@@ -100,4 +100,41 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .chip-remove:hover{color:var(--red)}
 .btn-secondary{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:.6rem 1.2rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:.82rem;white-space:nowrap;transition:all .2s;font-family:inherit}
 .btn-secondary:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-1px)}
+/* ─── External links ────────────────────────────────────────────────────── */
+.btn-link{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:6px;font-size:.7rem;font-weight:600;text-decoration:none;color:var(--cyan);background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.18);white-space:nowrap;transition:all .2s;flex-shrink:0}
+.btn-link:hover{background:rgba(6,182,212,.15);transform:translateY(-1px);box-shadow:0 2px 8px rgba(6,182,212,.2)}
+.btn-papers{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;text-decoration:none;font-size:.9rem;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);transition:all .2s;cursor:pointer}
+.btn-papers:hover{background:rgba(139,92,246,.15);transform:scale(1.15);box-shadow:0 2px 8px rgba(139,92,246,.25)}
+.gene-link{color:var(--cyan);text-decoration:none;transition:color .2s}
+.gene-link:hover{color:var(--primary);text-decoration:underline}
+/* ─── API Key Panel ─────────────────────────────────────────────────────── */
+.api-key-panel{background:var(--bg2);border-bottom:1px solid var(--border);padding:.8rem 2rem;animation:slideDown .2s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+/* ─── Modal ─────────────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:2rem}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:720px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:.95rem;font-weight:600;margin:0}
+.modal-close{background:none;border:none;color:var(--text3);font-size:1.1rem;cursor:pointer;padding:.3rem;border-radius:6px;transition:all .2s}
+.modal-close:hover{background:var(--border);color:var(--text)}
+.modal-body{padding:1.5rem;overflow-y:auto;flex:1}
+.modal-loading{text-align:center;padding:3rem 1rem}
+.modal-loading p{margin-top:1rem;color:var(--text3);font-size:.85rem}
+.spinner-lg{display:inline-block;width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+/* ─── Literature Summary ────────────────────────────────────────────────── */
+.lit-summary{background:rgba(139,92,246,.04);border:1px solid rgba(139,92,246,.12);border-radius:12px;padding:1.2rem;margin-bottom:1.2rem}
+.lit-badge{display:inline-block;padding:.2rem .6rem;border-radius:12px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.8rem}
+.lit-review{font-size:.84rem;line-height:1.7;color:var(--text2);margin:0}
+.lit-findings{margin:.8rem 0 0;padding-left:1.2rem}
+.lit-findings li{font-size:.82rem;color:var(--text2);padding:.2rem 0;list-style:disc}
+.lit-relevance{margin-top:.8rem;padding:.5rem .7rem;background:rgba(6,182,212,.06);border-radius:6px;font-size:.8rem;color:var(--cyan)}
+.lit-no-key{text-align:center;padding:1.5rem;color:var(--text3);font-size:.85rem;background:rgba(234,179,8,.05);border:1px solid rgba(234,179,8,.12);border-radius:10px;margin-bottom:1rem}
+.lit-papers-title{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:1.2rem 0 .6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+.lit-paper{display:block;text-decoration:none;padding:.7rem .8rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.5rem;transition:all .2s}
+.lit-paper:hover{border-color:var(--primary);background:rgba(139,92,246,.03);transform:translateX(3px)}
+.lit-paper-title{font-size:.82rem;font-weight:500;color:var(--text);line-height:1.4}
+.lit-paper-meta{font-size:.7rem;color:var(--text3);margin-top:.25rem}
+.lit-pubmed-link{display:block;text-align:center;padding:.7rem;margin-top:1rem;border-radius:8px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);color:var(--primary);text-decoration:none;font-size:.82rem;font-weight:500;transition:all .2s}
+.lit-pubmed-link:hover{background:rgba(139,92,246,.12);transform:translateY(-1px)}
 
