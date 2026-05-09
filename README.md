@@ -1,3 +1,9 @@
+To run the scoring :
+```bash
+python3 compute_scores.py patient1.csv patient2.csv patient3.csv --output scores.csv
+```
+
+
 # 🧬 GenomicOracle Co-Pilot
 
 **AI-Powered Genomic Case Triage Dashboard** — built for the SOPHiA Genetics × ETH Zurich Future of Health Hackathon (May 8–10, 2026).
