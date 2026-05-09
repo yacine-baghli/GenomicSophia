@@ -91,33 +91,16 @@ body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #9CA3AF; text-align: center; padding: 40px; }
 
-/* ── Tooltips ────────────────────────────────────────────────── */
-[data-tip] { position: relative; }
-[data-tip]::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 3px);
-  left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #1F2937;
-  pointer-events: none; opacity: 0;
-  transition: opacity .15s ease; z-index: 1001;
-}
-[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 13px);
-  left: 50%; transform: translateX(-50%);
+/* ── Tooltips (positioned by JS to avoid overflow clipping) ──── */
+#kairos-tip {
+  position: fixed; z-index: 9999; pointer-events: none;
   background: #1F2937; color: #F9FAFB;
-  font-size: 11px; line-height: 1.55; font-weight: 400;
+  font-size: 11px; line-height: 1.55; font-weight: 400; font-family: 'Inter', sans-serif;
   padding: 6px 10px; border-radius: 3px;
-  white-space: normal; width: max-content; max-width: 230px;
-  pointer-events: none; opacity: 0;
-  transition: opacity .15s ease; z-index: 1000; text-align: left;
+  max-width: 240px; white-space: normal; text-align: left;
+  opacity: 0; transition: opacity .15s ease;
+  display: none;
 }
-[data-tip]:hover::before, [data-tip]:hover::after { opacity: 1; }
-[data-tip-r]::before { left: auto; right: 0; transform: none; }
-[data-tip-r]::after  { left: auto; right: 0; transform: none; }
 </style>
 </head>
 <body>
@@ -911,6 +894,38 @@ function closeRick() {
   $('rick-overlay').style.display='none';
   $('rick-frame').src='';
 }
+
+// ── JS tooltip (fixed positioning, never clipped by overflow containers) ──
+(function() {
+  const tip = document.createElement('div');
+  tip.id = 'kairos-tip';
+  document.body.appendChild(tip);
+  let current = null;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el === current) return;
+    current = el;
+    if (!el) { tip.style.opacity = '0'; return; }
+    tip.textContent = el.getAttribute('data-tip');
+    tip.style.display = 'block';
+    tip.style.left = '0';
+    tip.style.top = '0';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = Math.min(Math.max(r.left, 8), window.innerWidth - tw - 8);
+    let top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    requestAnimationFrame(() => tip.style.opacity = '1');
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-tip]') && !e.relatedTarget?.closest('[data-tip]')) {
+      current = null;
+      tip.style.opacity = '0';
+    }
+  });
+})();
 </script>
 </body>
 </html>
