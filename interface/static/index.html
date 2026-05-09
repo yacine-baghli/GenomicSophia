@@ -207,6 +207,7 @@ body { font-family: 'Inter', sans-serif; background: #F7F7F5; color: #111; font-
 let selectedFiles = [];
 let allResults = [];   // scored results from API
 let selectedIdx = null;
+let selectedFile = null;
 let weights = {urgency: 5, rarity: 5, qa: 5};
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -351,6 +352,9 @@ async function loadDemo() {
 
 // ── Sidebar ───────────────────────────────────────────────────
 function renderSidebar() {
+  allResults.sort((a,b) => computeOverall(b) - computeOverall(a));
+  if (selectedFile) selectedIdx = allResults.findIndex(r => r.file === selectedFile);
+
   $('inbox-lbl').textContent=`INBOX · ${allResults.length} AWAITING REVIEW`;
   if(!allResults.length){
     $('sidebar-list').innerHTML=`<div class="empty-state" style="height:auto;padding:40px 20px;"><div style="font-size:12px;">No patients scored</div></div>`;
@@ -391,8 +395,9 @@ function patientName(filename) {
 // ── Detail ────────────────────────────────────────────────────
 function selectPatient(idx) {
   selectedIdx=idx;
+  selectedFile = allResults[idx] ? allResults[idx].file : null;
   renderSidebar();
-  const r=allResults[idx];
+  const r=allResults[selectedIdx];
   if(!r) return;
 
   $('empty-main').style.display='none';
