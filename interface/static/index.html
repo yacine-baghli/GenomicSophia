@@ -215,6 +215,22 @@ function priBadgeClass(level) {
   return {CRITICAL:'color:#111;font-weight:700',HIGH:'color:#374151;font-weight:600',MED:'color:#6B7280;font-weight:500',LOW:'color:#9CA3AF'}[level]||'';
 }
 
+function baseName(file) {
+  return file.replace(/ \(v\d+\)(\.[^.]+)$/, '$1').replace(/ \(v\d+\)$/, '');
+}
+
+function mergeWithVersioning(incoming) {
+  incoming.forEach(r => {
+    const base = r.file;
+    const count = allResults.filter(x => baseName(x.file) === base).length;
+    if (count > 0) {
+      r.file = base.replace(/(\.[^.]+)$/, ` (v${count + 1})$1`) || base + ` (v${count + 1})`;
+    }
+    allResults.push(r);
+  });
+  allResults.sort((a,b) => (b['Overall patient score']||0) - (a['Overall patient score']||0));
+}
+
 // ── Modal ─────────────────────────────────────────────────────
 function showModal() { selectedFiles=[]; renderChips(); $('modal').style.display='flex'; $('modal-err').style.display='none'; }
 function hideModal() { $('modal').style.display='none'; }
@@ -264,10 +280,7 @@ async function runScoring() {
     const res=await fetch('/api/score',{method:'POST',body:fd});
     if(!res.ok) throw new Error(await res.text());
     const data=await res.json();
-    allResults=[...allResults,...data.results];
-    allResults.sort((a,b)=>(b['Overall patient score']||0)-(a['Overall patient score']||0));
-    // Deduplicate by filename
-    allResults=allResults.filter((r,i)=>allResults.findIndex(x=>x.file===r.file)===i);
+    mergeWithVersioning(data.results);
     renderSidebar();
     hideModal();
     if(allResults.length) selectPatient(0);
@@ -289,9 +302,7 @@ async function loadDemo() {
     const res = await fetch('/api/demo');
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    allResults = [...allResults, ...data.results];
-    allResults.sort((a,b) => (b['Overall patient score']||0) - (a['Overall patient score']||0));
-    allResults = allResults.filter((r,i) => allResults.findIndex(x => x.file === r.file) === i);
+    mergeWithVersioning(data.results);
     renderSidebar();
     if (allResults.length) selectPatient(0);
   } catch(e) {
