@@ -262,7 +262,7 @@ async function runScoring() {
     if(!res.ok) throw new Error(await res.text());
     const data=await res.json();
     allResults=[...allResults,...data.results];
-    allResults.sort((a,b)=>(b['Overall CSV score']||0)-(a['Overall CSV score']||0));
+    allResults.sort((a,b)=>(b['Overall patient score']||0)-(a['Overall patient score']||0));
     // Deduplicate by filename
     allResults=allResults.filter((r,i)=>allResults.findIndex(x=>x.file===r.file)===i);
     renderSidebar();
@@ -285,10 +285,10 @@ function renderSidebar() {
     return;
   }
   const maxUrgency=Math.max(...allResults.map(r=>r['Disease urgency score']||0),1);
-  const maxOverall=Math.max(...allResults.map(r=>r['Overall CSV score']||0),1);
+  const maxOverall=Math.max(...allResults.map(r=>r['Overall patient score']||0),1);
 
   $('sidebar-list').innerHTML=allResults.map((r,i)=>{
-    const overall=r['Overall CSV score']||0;
+    const overall=r['Overall patient score']||0;
     const urgency=r['Disease urgency score']||0;
     const level=urgencyLevel(urgency,maxUrgency);
     const pct=Math.min((overall/maxOverall)*100,100);
@@ -328,9 +328,9 @@ function selectPatient(idx) {
   $('report-panel').style.display='flex';
 
   const maxUrgency=Math.max(...allResults.map(x=>x['Disease urgency score']||0),1);
-  const overall=r['Overall CSV score']||0;
+  const overall=r['Overall patient score']||0;
   const urgency=r['Disease urgency score']||0;
-  const action=r['Actionability score (placeholder)']||0;
+  const action=r['Rarity score (A/B community freq)']||0;
   const qa=r['QA confidence score']||0;
   const rows=r['Rows analyzed']||0;
   const level=urgencyLevel(urgency,maxUrgency);
@@ -369,9 +369,9 @@ function selectPatient(idx) {
         <div class="lbl" style="color:#D1D5DB;">composite</div>
       </div>
       <div class="metric">
-        <div class="lbl">Actionability</div>
-        <div class="metric-val">${actPct.toFixed(0)}%</div>
-        <div style="font-size:11px;color:#6B7280;">placeholder score</div>
+        <div class="lbl">Rarity</div>
+        <div class="metric-val">${actPct.toFixed(0)}</div>
+        <div style="font-size:11px;color:#6B7280;">A/B community freq</div>
       </div>
       <div class="metric">
         <div class="lbl">Disease Urgency</div>
@@ -404,8 +404,8 @@ function selectPatient(idx) {
 
       <div class="score-row">
         <div>
-          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Actionability</div>
-          <div style="font-size:11px;color:#9CA3AF;">Placeholder score · 50.0 per dataset</div>
+          <div style="font-size:12px;font-weight:500;color:#111;margin-bottom:2px;">Rarity</div>
+          <div style="font-size:11px;color:#9CA3AF;">Inverted community freq · A/B variants only</div>
         </div>
         <div class="score-track">
           <div class="score-fill" style="background:#10B981;" data-w="${actPct.toFixed(1)}"></div>
@@ -449,9 +449,9 @@ function selectPatient(idx) {
 }
 
 function renderComparison(activeIdx, maxUrgency) {
-  const maxOverall=Math.max(...allResults.map(r=>r['Overall CSV score']||0),1);
+  const maxOverall=Math.max(...allResults.map(r=>r['Overall patient score']||0),1);
   const rows=allResults.map((r,i)=>{
-    const overall=r['Overall CSV score']||0;
+    const overall=r['Overall patient score']||0;
     const urgency=r['Disease urgency score']||0;
     const qa=r['QA confidence score']||0;
     const level=urgencyLevel(urgency,maxUrgency);
@@ -486,7 +486,7 @@ function renderComparison(activeIdx, maxUrgency) {
 
 // ── Report ────────────────────────────────────────────────────
 function renderReport(r, level, urgColor, rows) {
-  const overall=r['Overall CSV score']||0;
+  const overall=r['Overall patient score']||0;
   const urgency=r['Disease urgency score']||0;
   const qa=r['QA confidence score']||0;
   const name=patientName(r.file);
@@ -513,8 +513,9 @@ function renderReport(r, level, urgColor, rows) {
     lines.push(`<p><strong style="color:#F59E0B;">QA concern.</strong> Confidence ${qa.toFixed(0)}% — verify coverage in key gene regions before clinical action.</p>`);
   }
 
-  // Actionability placeholder
-  lines.push(`<p>Actionability scoring is in development — placeholder value shown. Full therapy mapping will be available in v2.</p>`);
+  // Rarity note
+  const rarity=r['Rarity score (A/B community freq)']||0;
+  lines.push(`<p>Rarity score: <strong>${rarity.toFixed(1)}</strong> — mean inverted community frequency across A/B-class variants (higher = rarer variants).</p>`);
 
   // Overall
   lines.push(`<p>Overall priority score: <strong>${overall.toFixed(2)}</strong> (mean of urgency, actionability, QA). ${rows.toLocaleString()} variants analysed.</p>`);
