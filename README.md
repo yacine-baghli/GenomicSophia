@@ -5,6 +5,7 @@
 Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs.
 
 ---
+<img width="1918" height="1091" alt="image" src="https://github.com/user-attachments/assets/ef0b6aad-7a7d-48d7-b18f-2e6cf8b7d4e4" />
 
 ## What It Does
 
