@@ -2,7 +2,9 @@
 
 **AI-assisted genomic case triage** — built for the SOPHiA Genetics × ETH Zurich Future of Health Hackathon (May 8–10, 2026).
 
-Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs.
+[🌐 Live Website](https://genomicsophia-interface.vercel.app/) *(Update this link with your actual Vercel URL if different)*
+
+Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs. It features a transparent, 4-metric scoring system, real-time literature retrieval, and an advanced AI clinical summarization engine powered by Claude.
 
 https://genomic-sophia.vercel.app 
 
@@ -11,41 +13,58 @@ https://genomic-sophia.vercel.app
 
 ## What It Does
 
-A pathologist arrives Monday morning with a queue of pending analyses. KAIROS scores each patient across three objective dimensions and ranks them so she knows where to start — and lets her tune the ranking to match her clinical priorities.
+A pathologist arrives Monday morning with a queue of pending analyses. KAIROS evaluates each patient across four objective dimensions and ranks them so they know exactly where to start — and lets them tune the ranking to match their clinical priorities.
 
 | Score | What It Measures |
 |---|---|
-| **Disease Urgency** | SOPHiA DDM™ ABCD prediction: A=critical, B/C=elevated, D=benign — soft-clipped to 0–100 |
-| **Rarity** | Community frequency inverted for A/B-class variants — rarer variants score higher |
+| **Urgency (ABCD)** | SOPHiA DDM™ ABCD prediction: A=critical, B/C=elevated, D=benign — soft-clipped to 0–100 |
+| **ClinVar Score** | Weighted based on ClinVar significance (Pathogenic, Likely Pathogenic, VUS, etc.) and review status (stars) |
+| **Rarity (Community)** | Community frequency inverted for A/B-class variants — rarer variants score higher |
 | **QA Confidence** | Mean read depth normalized 0–100 — flags low-coverage samples |
 
-The three scores combine into a weighted **Overall Priority** score. Weights are adjustable live in the dashboard.
+These four scores combine into a weighted **Overall Priority** score. Weights are adjustable live in the dashboard.
 
 ---
 
-## Quick Start
+## 🌟 Key Features & How to Use Them
+
+### 1. Dynamic Patient Scoring & Ranking
+- **How to use**: Simply upload patient CSVs or click **Demo**. The dashboard automatically ranks patients. Use the **sliders** in the "Score Breakdown" panel to shift the emphasis of the 4 key metrics. The overall score and sidebar ranking will update instantly.
+
+### 2. AI Clinical Summary (Claude API Integration)
+KAIROS integrates directly with Anthropic's Claude LLM to provide a high-level clinical summary and an independent "AI Score" for the patient's top variants.
+- **How to use**: 
+  1. Click the **⚙️ API Key** button in the top right.
+  2. Select `Anthropic` and paste your API key.
+  3. Select a patient and click **✨ Generate AI Summary**.
+- **How it works**: The backend sends the top 10 prioritized variants (based on pathogenicity and A/B prediction) to the Anthropic Claude API model, asking for a 0-100 severity score and a 2-sentence clinical summarization of the key actionable findings.
+
+### 3. Real-Time PubMed Literature Retrieval
+- **How to use**: In the "Top Variants" table, click the **📚** button next to any variant.
+- **How it works**: KAIROS queries the NCBI E-utilities API live, searching PubMed for the specific Gene and HGVS mutation. A modal will pop up with the most recent relevant academic papers, complete with authors, journals, and direct links to PubMed.
+
+### 4. Interactive Gene Databases
+- **How to use**: Click on any highlighted Gene name (e.g., in the Shared Genes panel or Top Variants table).
+- **How it works**: Fetches live data from external genomic databases (MyGene.info and CIViC) to provide a quick summary of the gene's function and known clinical significance.
+
+### 5. Batch Demo Loading
+- **How to use**: Click the **Demo** button in the left sidebar.
+- **How it works**: The backend automatically traverses the local `samples/` directory, processes all bundled patient CSVs simultaneously, and loads them into the UI without requiring manual file uploads.
+
+---
+
+## Quick Start (Local Development)
 
 ```bash
 git clone https://github.com/yacine-baghli/GenomicSophia.git
-cd GenomicSophia/interface
+cd GenomicSophia
 pip install -r requirements.txt
-uvicorn main:app --reload
+python -m uvicorn interface.main:app --port 8000 --reload
 ```
 
 Open **http://localhost:8000** in your browser.
 
----
-
-## Usage
-
-### Demo patients
-Click **Demo** in the sidebar to instantly load the three bundled example CSVs (`patient1.csv`, `patient2.csv`, `patient3.csv`) — no upload needed.
-
-### Upload your own
-Click **+ Upload**, drag and drop up to 10 SOPHiA DDM™ variant export CSVs, then click **Score Patients**. Uploading the same file again creates a versioned copy (`patient (v2).csv`) rather than overwriting.
-
-### Adjust weights
-Each score row in the breakdown panel has a 0–10 slider. Drag to shift emphasis — the overall score and sidebar ranking update live.
+*(Note: Vercel deployments are natively supported. Vercel automatically routes to `api/index.py` which wraps the FastAPI application.)*
 
 ---
 
@@ -56,6 +75,7 @@ Standard SOPHiA DDM™ variant export CSV. Required columns:
 | Column | Used For |
 |---|---|
 | `SOPHiA DDM™ prediction` (col 2) | Disease urgency — values A / B / C / D |
+| `clinvar_significance` / `review_status` | Pathogenicity classification and ClinVar scoring |
 | `Read depth` | QA confidence normalization |
 | `Community frequency` | Rarity score for A/B variants |
 
@@ -63,16 +83,18 @@ Standard SOPHiA DDM™ variant export CSV. Required columns:
 
 ## Project Structure
 
-```
-interface/
-├── main.py              # FastAPI backend — /api/score, /api/demo
-├── compute_scores.py    # Scoring engine (disease urgency, rarity, QA)
-├── static/
-│   └── index.html       # KAIROS dashboard (single-file SPA)
-├── patient1.csv         # Demo data — SOPHiA DDM™ export format
-├── patient2.csv
-├── patient3.csv
-└── requirements.txt
+```text
+.
+├── api/
+│   └── index.py         # Vercel Serverless entrypoint
+├── interface/
+│   ├── main.py          # FastAPI backend — /api/score, /api/demo, /api/llm_summary
+│   ├── ai_engine.py     # Core 4-metric scoring engine
+│   ├── static/
+│   │   └── index.html   # KAIROS dashboard (single-file SPA)
+│   └── samples/         # Bundled Demo CSVs
+├── vercel.json          # Vercel deployment configuration
+└── requirements.txt     # Global dependencies (FastAPI, Pandas, Anthropic, Requests)
 ```
 
 ---
@@ -81,21 +103,12 @@ interface/
 
 | Layer | Technology |
 |---|---|
-| Backend | FastAPI + Uvicorn |
-| Scoring | `compute_scores.py` — pure pandas, no ML |
-| Frontend | Vanilla HTML/CSS/JS — zero dependencies |
-| Data | SOPHiA DDM™ variant export CSV |
-
----
-
-## API
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/score` | POST | Score uploaded CSV files (multipart/form-data, `files` field, max 10) |
-| `/api/demo` | GET | Score the bundled demo patients |
-
-Both return `{ "results": [ { "file", "Rows analyzed", "Disease urgency score", "Rarity score (A/B community freq)", "QA confidence score", "Overall patient score" }, ... ] }` sorted by overall score descending.
+| **Backend** | FastAPI + Uvicorn |
+| **Scoring** | `ai_engine.py` — Pure Pandas, heuristic-based |
+| **AI Engine** | Anthropic Claude API (JSON structured outputs) |
+| **Integrations**| NCBI E-utilities (PubMed), MyGene, CIViC |
+| **Frontend** | Vanilla HTML/CSS/JS — Zero build-step |
+| **Deployment**| Vercel Serverless Functions |
 
 ---
 
