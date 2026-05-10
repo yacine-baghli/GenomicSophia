@@ -353,33 +353,74 @@ def parse_csv_to_cases(csv_text):
     return cases
 
 
-# ─── LLM Summary ───────────────────────────────────────────────────────────
-
-def get_copilot_system_prompt():
-    return """You are an expert Genomic Pathologist AI Co-Pilot integrated into the SOPHiA DDM™ platform.
-Given scored variant data for a patient sample, write a concise 2-3 sentence clinical summary describing
-the most clinically significant findings, their implications for patient management, and any relevant
-therapeutic considerations. Be specific about gene names, variant types, and clinical significance.
-Do NOT output JSON. Write plain text only."""
-
+# ─── LLM Summary (variant_analysis_ai.py style) ───────────────────────────
 
 def generate_case_summary_llm(scored_case, llm_provider=None, api_key=None):
-    """Generate LLM-powered case summary using Claude/Gemini/GPT."""
-    prompt = f"""Patient Sample: {scored_case['case_id']}
-Case Score: {scored_case['case_score']}/100 ({scored_case['urgency_label']})
-Variants: {scored_case['total_variants']} total, {scored_case['pathogenic_count']} ClinVar-pathogenic
-Avg Metrics — ABCD:{scored_case['avg_abcd']} ClinVar:{scored_case['avg_clinvar']} Community:{scored_case['avg_community']} QA:{scored_case['avg_qa']}
-Top Genes: {', '.join(scored_case['top_genes'][:6])}
-Therapies: {', '.join(scored_case['top_therapies'][:5]) or 'None'}
+    """Generate Claude-style importance score + 2-sentence summary for a case."""
 
-Top 5 variants by composite score:
+    # Format top variants like variant_analysis_ai.py
+    top_variants = scored_case["scored_variants"][:10]
+    variant_texts = []
+    for v in top_variants:
+        variant_texts.append(
+            f"Gene: {v['gene']} | Prediction: {v['abcd']} | ClinVar: {v['clinvar']} "
+            f"| Consequence: {v['consequence']} | HGVS: {v['hgvs']} | VAF: {v['allele_frequency']} "
+            f"| CommunityFreq: {v['community_freq']} | CompositeScore: {v['composite_score']}"
+        )
+    variants_str = "\n".join(variant_texts)
+
+    prompt = f"""Analyze these genetic variants from a patient sample. The file contains {scored_case['total_variants']} total variants.
+
+Top {len(top_variants)} prioritized variants:
+{variants_str}
+
+Please provide:
+1. An importance score (0-100) where 100 means these variants represent a critical clinical case requiring urgent action
+2. A brief summary (2 sentences) of the most relevant/important variants and what they indicate
+
+Respond with a JSON object containing:
+{{
+  "importance_score": <number 0-100>,
+  "summary": "<brief summary of key findings>"
+}}
+
+Scoring guidelines:
+
+0-20:
+Benign or likely benign variants with no known clinical significance.
+
+21-40:
+Variants of uncertain significance with weak disease association or low confidence.
+
+41-60:
+Potentially clinically relevant variants, moderate evidence, limited actionability.
+
+61-80:
+Pathogenic or likely pathogenic variants with strong disease association and potential therapeutic or prognostic relevance.
+
+81-100:
+Critical clinically actionable findings requiring urgent attention, such as:
+- established pathogenic drivers
+- FDA-recognized biomarkers
+- high-confidence oncogenic mutations
+- variants linked to targeted therapies
+- aggressive tumor signatures
+- high VAF clonal pathogenic variants
+
+Use the FULL range of scores.
+Do not default to multiples of 5.
+Scores like 67, 82, 91 are preferred when appropriate.
+
+Consider factors like:
+- Pathogenicity classifications
+- Actionability of variants
+- Gene involvement in disease
+- Prediction confidence
+- VAF (variant allele frequency) values
+- Whether variants are in tumor vs normal samples
 """
-    for v in scored_case["scored_variants"][:5]:
-        prompt += f"  - {v['gene']} {v['hgvs']} ({v['consequence']}) | ABCD:{v['abcd']} Score:{v['composite_score']} ClinVar:{v['clinvar']} CommunityFreq:{v['community_freq']}\n"
 
-    prompt += "\nWrite a 2-3 sentence clinical summary of this sample's key findings."
-
-    # Try providers in order
+    # Try providers in order (Claude first)
     anthropic_key = api_key if llm_provider == "anthropic" else os.environ.get("ANTHROPIC_API_KEY")
     gemini_key = api_key if llm_provider == "gemini" else os.environ.get("GEMINI_API_KEY")
     openai_key = api_key if llm_provider == "openai" else os.environ.get("OPENAI_API_KEY")
@@ -391,12 +432,28 @@ Top 5 variants by composite score:
     ]:
         if key and (not llm_provider or llm_provider == provider):
             try:
-                text = fn(key, prompt, raw_text=True)
-                return text  # Return raw text, not JSON
+                raw = fn(key, prompt, raw_text=True)
+                return _parse_ai_analysis(raw)
             except Exception as e:
                 print(f"{provider} error: {e}")
 
     return None  # No LLM available
+
+
+def _parse_ai_analysis(response_text):
+    """Parse Claude's JSON response into importance_score + summary."""
+    try:
+        json_start = response_text.find("{")
+        json_end = response_text.rfind("}") + 1
+        if json_start != -1 and json_end > json_start:
+            result = json.loads(response_text[json_start:json_end])
+            return {
+                "importance_score": round(float(result.get("importance_score", 50.0)), 1),
+                "summary": result.get("summary", "Analysis complete."),
+            }
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return {"importance_score": 50.0, "summary": response_text[:300]}
 
 
 def _call_gemini(key, prompt, raw_text=False):
@@ -405,36 +462,27 @@ def _call_gemini(key, prompt, raw_text=False):
     client = genai.Client(api_key=key)
     r = client.models.generate_content(
         model="gemini-2.5-flash", contents=prompt,
-        config=types.GenerateContentConfig(system_instruction=get_copilot_system_prompt()))
-    return r.text.strip() if raw_text else _parse_json(r.text)
+        config=types.GenerateContentConfig(system_instruction="You are an expert genomic pathologist. Respond with JSON only."))
+    return r.text.strip()
 
 def _call_openai(key, prompt, raw_text=False):
     import openai
     client = openai.OpenAI(api_key=key)
     r = client.chat.completions.create(model="gpt-4o", messages=[
-        {"role": "system", "content": get_copilot_system_prompt()},
+        {"role": "system", "content": "You are an expert genomic pathologist. Respond with JSON only."},
         {"role": "user", "content": prompt}])
-    text = r.choices[0].message.content
-    return text.strip() if raw_text else _parse_json(text)
+    return r.choices[0].message.content.strip()
 
 def _call_anthropic(key, prompt, raw_text=False):
     import anthropic
     client = anthropic.Anthropic(api_key=key)
     r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=500,
-        system=get_copilot_system_prompt(), messages=[{"role": "user", "content": prompt}])
-    text = r.content[0].text
-    return text.strip() if raw_text else _parse_json(text)
+        messages=[{"role": "user", "content": prompt}])
+    return r.content[0].text.strip()
 
-def _parse_json(text):
-    clean = text.strip()
-    for prefix in ("```json", "```"):
-        if clean.startswith(prefix):
-            clean = clean[len(prefix):]
-    if clean.endswith("```"):
-        clean = clean[:-3]
-    return json.loads(clean.strip())
 
 def _generate_fallback_summary(scored_case):
+    """Deterministic summary when no LLM is available."""
     bullets = []
     bullets.append(f"{scored_case['total_variants']} variants — {scored_case['pathogenic_count']} ClinVar-pathogenic.")
     top_abcd = [v["gene"] for v in scored_case["scored_variants"] if v["abcd_score"] >= 65]
@@ -444,8 +492,28 @@ def _generate_fallback_summary(scored_case):
     else:
         bullets.append("Standard-of-care per tumor site guidelines.")
     bullets.append("Molecular tumor board discussion recommended." if scored_case["case_score"] >= 50 else "Standard workflow. No urgent escalation.")
+
+    # Build a 2-sentence summary like variant_analysis_ai.py
+    top_abcd_str = ', '.join(list(set(top_abcd))[:4]) or 'None'
+    sentence1 = (f"Analyzed {scored_case['total_variants']} variants with "
+                 f"{scored_case['pathogenic_count']} ClinVar-pathogenic hits; "
+                 f"high-confidence ABCD genes include {top_abcd_str}.")
+    if scored_case["top_therapies"]:
+        therapy_str = ', '.join(scored_case['top_therapies'][:3])
+        sentence2 = (f"Consider targeted therapies ({therapy_str}); "
+                     + ("molecular tumor board discussion recommended."
+                        if scored_case["case_score"] >= 50
+                        else "standard workflow, no urgent escalation."))
+    else:
+        sentence2 = ("Standard-of-care per tumor site guidelines; "
+                     + ("molecular tumor board discussion recommended."
+                        if scored_case["case_score"] >= 50
+                        else "no urgent escalation."))
+
     return {
         "summary_bullets": bullets,
+        "summary": f"{sentence1} {sentence2}",
         "recommended_action": scored_case.get("urgency_label", "Review case"),
         "estimated_review_time": f"{max(5, scored_case['total_variants'] * 2)} min",
     }
+

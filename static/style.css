@@ -67,6 +67,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .summary h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin-bottom:.6rem}
 .summary li{padding:.3rem 0;font-size:.82rem;color:var(--text2);list-style:none}
 .summary li::before{content:"→ ";color:var(--primary);font-weight:600}
+.summary .det-summary{font-size:.84rem;line-height:1.7;color:var(--text2);margin:0 0 .6rem}
 .summary .action{margin-top:.6rem;padding:.4rem .7rem;background:rgba(139,92,246,.08);border-radius:5px;font-size:.78rem;color:var(--primary)}
 .vtable{width:100%;border-collapse:collapse;font-size:.76rem;margin-top:.5rem}
 .vtable th{text-align:left;padding:.5rem .4rem;color:var(--text3);font-weight:500;text-transform:uppercase;font-size:.62rem;letter-spacing:.05em;border-bottom:1px solid var(--border)}
@@ -141,3 +142,4 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .llm-summary{background:rgba(6,182,212,.04);border:1px solid rgba(6,182,212,.12);border-radius:12px;padding:1rem 1.2rem;margin-bottom:.8rem}
 .llm-summary h4{margin:0 0 .5rem;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--cyan)}
 .llm-summary p{font-size:.84rem;line-height:1.7;color:var(--text2);margin:0}
+.ai-score-badge{display:inline-block;margin-left:.6rem;padding:.15rem .5rem;border-radius:10px;font-size:.68rem;font-weight:700;background:rgba(139,92,246,.1);color:var(--primary);border:1px solid rgba(139,92,246,.2);vertical-align:middle}

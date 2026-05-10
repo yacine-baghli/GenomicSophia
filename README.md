@@ -156,7 +156,7 @@ Each ranked case displays a two-layer summary system:
 
 ### Layer 1: 🧠 AI Clinical Summary (LLM-Powered)
 
-When a **Claude**, **Gemini**, or **OpenAI** API key is configured, the top 5 variants and case metrics are sent to the LLM, which generates a **2-3 sentence clinical narrative** — similar to what a genomic pathologist would dictate.
+When a **Claude**, **Gemini**, or **OpenAI** API key is configured, the top 10 variants and case metrics are sent to the LLM, which generates a **2-sentence clinical narrative** — similar to what a genomic pathologist would dictate.
 
 *Example output:*
 > *"Two pathogenic PMS2 variants at high VAF (48-55%) indicate Lynch syndrome/MMR deficiency, alongside oncogenic TP53 and RB1 frameshifts suggesting an aggressive tumor with potential for immunotherapy response. The ESR1 hotspot mutation (p.Y537S) at low VAF indicates hormone therapy resistance emerging in this tumor."*
@@ -166,14 +166,19 @@ The LLM receives:
 - Variant counts (total, ClinVar-pathogenic)
 - Average values of all 4 metrics
 - Top genes and matched therapies
-- Detailed data for the top 5 variants (gene, HGVS, consequence, ABCD, composite score, ClinVar, community frequency)
+- Detailed data for the top 10 variants (gene, HGVS, consequence, ABCD, composite score, ClinVar, community frequency)
 
 **How to activate:** Click **⚙️ API Key** → select **Claude** → paste your Anthropic API key → **💾 Save Key**. Then set the **LLM** dropdown to Claude and click **🔬 Rank All Cases**.
 
 ### Layer 2: ⚡ Deterministic Analysis (Always Available)
 
-A rule-based summary generated from the scoring results — no API key required:
-1. **Variant counts**: *"319 variants — 5 ClinVar-pathogenic."*
+A rule-based **2-sentence summary** generated from the scoring results — no API key required:
+
+*Example output:*
+> *"Analyzed 319 variants with 26 ClinVar-pathogenic hits; high-confidence ABCD genes include BRCA1, ERBB2, BRAF, KIT. Consider targeted therapies (Adagrasib (G12C), Tepotinib, Alpelisib); molecular tumor board discussion recommended."*
+
+Also includes a bullet-point breakdown:
+1. **Variant counts**: *"319 variants — 26 ClinVar-pathogenic."*
 2. **High-confidence genes**: Top ABCD:A/B genes
 3. **Therapy recommendations**: Matched from the 21-gene actionable database
 4. **Action label**: Based on urgency tier
@@ -225,7 +230,7 @@ Or use the **⚙️ API Key** button in the dashboard header.
 
 Drop SOPHiA DDM™ export CSVs into the `samples/` folder — they're loaded automatically.
 
-- **3 sample patients included** (`patient1.csv`, `patient2.csv`, `patient3.csv`)
+- **8 sample patients included** (`patient1.csv` through `patient8.csv`)
 - Reads SOPHiA DDM™ columns: `gene`, `SOPHiA DDM™ prediction` (ABCD), `Coding consequence`, `clinvar_significance`, `clinvar_review_status`, `Community frequency`, `Read depth`, `VAF(%)`, `Protein`, `c.DNA`
 - Also supports generic CSV: `Sample`, `Gene`, `HGVS`, `ABCD`, `ClinVar`, `ReadDepth`, `AF`
 
@@ -240,10 +245,6 @@ Drop SOPHiA DDM™ export CSVs into the `samples/` folder — they're loaded aut
 2. Get dataset keys from browser DevTools (Network tab)
 3. Paste into the VQS API tab → **Analyze**
 
-### 📋 Demo Mode
-
-Pre-built oncology case for quick demonstration.
-
 ---
 
 ## 📁 Project Structure
@@ -255,9 +256,8 @@ GenomicSophia/
 ├── vqs_client.py       # SOPHiA VQS API client
 ├── requirements.txt    # Python dependencies
 ├── samples/            # CSV data (auto-loaded on startup)
-│   ├── patient1.csv    # ESR1-Low-VAF-T (263 variants)
-│   ├── patient2.csv    # COQ8A-SKIV2L (500 variants)
-│   └── patient3.csv    # ACCESS010-CP (319 variants)
+│   ├── patient1.csv    # ... through patient8.csv
+│   └── ...             # 8 SOPHiA DDM™ CSV exports
 ├── templates/
 │   └── copilot.html    # Dashboard HTML
 └── static/

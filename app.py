@@ -192,14 +192,16 @@ def _rank_and_respond(cases, llm_provider):
     for c in ranked:
         # Always generate deterministic summary
         c['summary'] = _generate_fallback_summary(c)
-        # Try to add LLM clinical summary on top
+        # Try to add LLM analysis (importance_score + 2-sentence summary)
         api_key = session.get('api_key', '')
         provider = session.get('llm_provider', llm_provider)
         if provider and provider != 'none' and api_key:
-            llm_text = generate_case_summary_llm(c, provider, api_key)
-            if llm_text:
-                c['llm_summary'] = llm_text  # Separate field for LLM text
+            llm_result = generate_case_summary_llm(c, provider, api_key)
+            if llm_result and isinstance(llm_result, dict):
+                c['llm_summary'] = llm_result.get('summary', '')
+                c['ai_importance_score'] = llm_result.get('importance_score', None)
     return jsonify({"success": True, "ranked_cases": ranked})
+
 
 
 if __name__ == '__main__':

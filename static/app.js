@@ -183,20 +183,7 @@ function setStatus(cls,txt){
   document.getElementById('conn-status').innerHTML=`<span class="dot ${cls}"></span>${txt}`;
 }
 
-// ─── Demo Data ─────────────────────────────────────────────────────────────
-function loadDemo(){
-  setStatus('on','Demo Mode');
-  renderCases([
-    {case_id:"Sample A — NSCLC Panel",case_score:82,urgency:"critical",urgency_color:"#ef4444",urgency_label:"🔴 CRITICAL",
-     total_variants:47,pathogenic_count:3,
-     avg_abcd:72,avg_qa:85,avg_community:82,avg_clinvar:70,
-     top_genes:["EGFR","TP53","KRAS","ALK"],top_therapies:["Osimertinib","Sotorasib","Crizotinib"],flags:[],
-     scored_variants:[
-       {gene:"EGFR",hgvs:"p.L858R",consequence:"Missense",abcd:"A",composite_score:88,abcd_score:77,qa_confidence:92,community_score:90,clinvar_score:90,clinvar:"Pathogenic",community_freq:"0",therapies:["Osimertinib"],flags:["ABCD: A","ClinVar: Pathogenic"]},
-       {gene:"TP53",hgvs:"p.R273H",consequence:"Missense",abcd:"B",composite_score:65,abcd_score:57,qa_confidence:80,community_score:85,clinvar_score:80,clinvar:"Pathogenic",community_freq:"0.002",therapies:[],flags:["Prognostic: Genomic instability"]},
-     ],summary:{summary_bullets:["3 ClinVar-pathogenic variants.","EGFR L858R: Osimertinib first-line.","KRAS G12C: Sotorasib eligible.","TP53 R273H: Monitor q3mo."],recommended_action:"Priority tumor board.",estimated_review_time:"12 min"}},
-  ]);
-}
+
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -237,8 +224,9 @@ function renderCases(cases){
        ${metricBox('Community Freq.',c.avg_community)}
        ${metricBox('QA Confidence',c.avg_qa)}
       </div>
-      ${llm?`<div class="llm-summary"><h4>🧠 AI Clinical Summary</h4><p>${llm}</p></div>`:''}
-      ${bullets.length?`<div class="summary"><h4>⚡ Deterministic Analysis</h4><ul>${bullets.map(b=>'<li>'+b+'</li>').join('')}</ul>
+      ${llm?`<div class="llm-summary"><h4>🧠 AI Clinical Summary${c.ai_importance_score!=null?' <span class="ai-score-badge">AI Score: '+c.ai_importance_score+'/100</span>':''}</h4><p>${llm}</p></div>`:''}
+      ${s.summary||bullets.length?`<div class="summary"><h4>⚡ Deterministic Analysis</h4>${s.summary?`<p class="det-summary">${s.summary}</p>`:''}
+      ${bullets.length?`<ul>${bullets.map(b=>'<li>'+b+'</li>').join('')}</ul>`:''}
       ${s.recommended_action?`<div class="action"><strong>Action:</strong> ${s.recommended_action}</div>`:''}</div>`:''}
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem">${(c.top_therapies||[]).map(t=>`<span class="tag tag-therapy">💊 ${t}</span>`).join('')||'<span style="font-size:.75rem;color:var(--text3)">No targeted therapies</span>'}</div>
       <div class="section-title">Variant Priority Ranking <span style="font-size:.72rem;color:var(--text3);font-weight:400;margin-left:.5rem">Top ${Math.min(c.scored_variants?.length||0, 50)} of ${c.total_variants}</span></div>

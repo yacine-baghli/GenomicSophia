@@ -32,7 +32,6 @@
  <div class="tabs">
   <button class="tab active" id="tab-btn-csv" onclick="switchTab('csv',this)">📄 CSV Data</button>
   <button class="tab" id="tab-btn-api" onclick="switchTab('api',this)">🔌 VQS API</button>
-  <button class="tab" id="tab-btn-demo" onclick="switchTab('demo',this)">📋 Demo</button>
  </div>
  <div id="tab-csv" class="tab-body">
   <label class="field-label">Sample files in /samples</label>
@@ -56,10 +55,8 @@
    <button class="btn-primary" onclick="runVQS()">🔍 Analyze</button>
   </div>
  </div>
- <div id="tab-demo" class="tab-body" style="display:none">
-  <button class="btn-primary" onclick="loadDemo()">📋 Load Demo Data</button>
- </div>
 </div>
+
 
 <div id="cases-grid" class="cases-grid">
  <div class="empty"><div class="icon">⏳</div><p>Loading and ranking sample data...</p></div>
