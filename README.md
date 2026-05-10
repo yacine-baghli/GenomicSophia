@@ -4,6 +4,8 @@
 
 Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs.
 
+https://genomic-sophia.vercel.app 
+
 ---
 <img width="1919" height="1089" alt="image" src="https://github.com/user-attachments/assets/1753f5bc-df78-4803-9ff4-70a003ff1997" />
 
