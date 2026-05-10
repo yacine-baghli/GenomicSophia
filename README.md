@@ -30,6 +30,11 @@ These four scores combine into a weighted **Overall Priority** score. Weights ar
 
 ### 1. Dynamic Patient Scoring & Ranking
 - **How to use**: Simply upload patient CSVs or click **Demo**. The dashboard automatically ranks patients. Use the **sliders** in the "Score Breakdown" panel to shift the emphasis of the 4 key metrics. The overall score and sidebar ranking will update instantly.
+- **Under the Hood (The Algorithms)**:
+  - **Urgency (ABCD)**: Extracts the SOPHiA DDM™ predictions. An 'A' prediction grants 100 points, 'B' grants 50, and 'C'/'D' grant 0. The mean of the top variants forms the base score.
+  - **ClinVar Score**: Parses the `clinvar_significance` and `review_status` columns. Pathogenic variants with Expert/Multiple submissions receive maximum weighting, propagating up to a 100-point score for the patient.
+  - **Rarity (Community)**: Inverts the `Community frequency` percentage (100 - frequency). Extremely rare variants (close to 0% frequency) in the A/B class will push this score near 100.
+  - **QA Confidence**: Averages the `Read depth` across variants, softly capping at 2000x coverage. Patients with systematically low coverage will flag as low QA confidence.
 
 ### 2. AI Clinical Summary (Claude API Integration)
 KAIROS integrates directly with Anthropic's Claude LLM to provide a high-level clinical summary and an independent "AI Score" for the patient's top variants.
@@ -37,11 +42,11 @@ KAIROS integrates directly with Anthropic's Claude LLM to provide a high-level c
   1. Click the **⚙️ API Key** button in the top right.
   2. Select `Anthropic` and paste your API key.
   3. Select a patient and click **✨ Generate AI Summary**.
-- **How it works**: The backend sends the top 10 prioritized variants (based on pathogenicity and A/B prediction) to the Anthropic Claude API model, asking for a 0-100 severity score and a 2-sentence clinical summarization of the key actionable findings.
+- **Under the Hood**: The backend runs a heuristic pre-filter to identify the 10 most critical variants (prioritizing Pathogenic and A/B predictions). It compiles these variants—including Gene, Prediction, Consequence, Protein change, ClinVar status, and VAF—into a structured prompt. The `claude-opus` (or your configured model) processes the prompt and returns a strict JSON payload containing a 0-100 severity score and a 2-sentence clinical summarization of the key actionable findings.
 
 ### 3. Real-Time PubMed Literature Retrieval
 - **How to use**: In the "Top Variants" table, click the **📚** button next to any variant.
-- **How it works**: KAIROS queries the NCBI E-utilities API live, searching PubMed for the specific Gene and HGVS mutation. A modal will pop up with the most recent relevant academic papers, complete with authors, journals, and direct links to PubMed.
+- **Under the Hood**: KAIROS queries the NCBI E-utilities API live (`esearch` followed by `esummary`), searching PubMed for the specific Gene and HGVS mutation. The JSON response is parsed to extract the title, first three authors (appending "et al." if applicable), journal name, and publication date. A modal pops up with the most recent relevant academic papers, complete with direct links to PubMed.
 
 ### 4. Interactive Gene Databases
 - **How to use**: Click on any highlighted Gene name (e.g., in the Shared Genes panel or Top Variants table).
