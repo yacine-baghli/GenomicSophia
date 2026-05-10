@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>KAIROS · AI-Powered Genomic Case Triage</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+:root { --bg:#F7F7F5;--surface:#fff;--border:#E5E7EB;--border-light:#F3F4F6;--text:#111;--text-muted:#9CA3AF;--text-sec:#6B7280;--text-body:#374151;--hover:#FAFAFA;--card-bg:#fff;--accent:#1D4ED8;--danger:#DC2626;--warn:#C2410C;--ok:#059669;--crit:#EF4444;--high:#F97316;--med:#EAB308;--low:#10B981;--pill-p-bg:#FEF2F2;--pill-p-fg:#DC2626;--pill-p-bd:#FCA5A5;--pill-lp-bg:#FFF7ED;--pill-lp-fg:#C2410C;--pill-lp-bd:#FED7AA;--pill-vus-bg:#F9FAFB;--pill-vus-fg:#6B7280;--pill-vus-bd:#D1D5DB;--pill-lb-bg:#EFF6FF;--pill-lb-fg:#1D4ED8;--pill-lb-bd:#BFDBFE;--pill-b-bg:#F0FDF4;--pill-b-fg:#059669;--pill-b-bd:#6EE7B7;--chip-bg:#F0F6FF;--chip-bd:#BFDBFE;--chip-fg:#1D4ED8;--tip-bg:#1F2937;--tip-fg:#F9FAFB;--drop-bd:#D1D5DB;--drop-ok:#10B981;--drop-ok-bg:#F0FDF4;--sb-track:transparent;--sb-thumb:#D1D5DB;--star-on:#F59E0B;--star-off:#E5E7EB;--bar-bg:#F3F4F6; }
+body.dark { --bg:#0d0d0d;--surface:#161616;--border:#2a2a2a;--border-light:#222;--text:#f0f0f0;--text-muted:#6B7280;--text-sec:#9CA3AF;--text-body:#c8ccd0;--hover:#1e1e1e;--card-bg:#1a1a1a;--accent:#60a5fa;--danger:#f87171;--warn:#fb923c;--ok:#34d399;--crit:#f87171;--high:#fb923c;--med:#facc15;--low:#34d399;--pill-p-bg:#2a1515;--pill-p-fg:#f87171;--pill-p-bd:#7f1d1d;--pill-lp-bg:#2a1f15;--pill-lp-fg:#fb923c;--pill-lp-bd:#7c2d12;--pill-vus-bg:#1a1a1a;--pill-vus-fg:#9CA3AF;--pill-vus-bd:#374151;--pill-lb-bg:#151e2a;--pill-lb-fg:#60a5fa;--pill-lb-bd:#1e3a5f;--pill-b-bg:#152a1a;--pill-b-fg:#34d399;--pill-b-bd:#065f46;--chip-bg:#1a2333;--chip-bd:#1e3a5f;--chip-fg:#60a5fa;--tip-bg:#374151;--tip-fg:#f0f0f0;--drop-bd:#374151;--drop-ok:#34d399;--drop-ok-bg:#152a1a;--sb-track:transparent;--sb-thumb:#374151;--star-on:#fbbf24;--star-off:#374151;--bar-bg:#222; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; overflow: hidden; transition: background .2s, color .2s; }
+
+/* ── Top nav ─────────────────────────────────────────────────── */
+.nav { height: 48px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; justify-content: space-between; flex-shrink: 0; }
+.nav-logo { font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; }
+.nav-sub { font-size: 10px; color: var(--text-muted); letter-spacing: .04em; margin-left: 10px; text-transform: none; font-weight: 400; }
+.nav-right { display: flex; align-items: center; gap: 8px; }
+.nav-btn { padding: 4px 10px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-sec); border-radius: 2px; transition: background .1s; }
+.nav-btn:hover { background: var(--hover); }
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.layout { display: flex; height: calc(100vh - 48px); }
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.sidebar { width: 288px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.sidebar-head { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-list { flex: 1; overflow-y: auto; }
+
+.patient-row { padding: 14px 18px; border-bottom: 1px solid var(--border-light); cursor: pointer; border-left: 3px solid transparent; transition: background .1s; }
+.patient-row:hover { background: var(--hover); }
+.patient-row.active { border-left-color: var(--text); background: var(--hover); }
+.patient-row:last-child { border-bottom: none; }
+
+.pri-bar { height: 2px; background: var(--bar-bg); border-radius: 1px; margin-top: 9px; }
+.pri-fill { height: 100%; background: var(--text); border-radius: 1px; transition: width .9s cubic-bezier(.4,0,.2,1); width: 0; }
+
+/* ── Main ────────────────────────────────────────────────────── */
+.main { flex: 1; overflow-y: auto; }
+.main-inner { padding: 32px 36px; }
+
+/* ── Metric cards ────────────────────────────────────────────── */
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--border); margin: 22px 0 0; }
+.metric { background: var(--card-bg); padding: 18px 20px; border-right: 1px solid var(--border); }
+.metric:last-child { border-right: none; }
+.metric-val { font-size: 32px; font-weight: 300; letter-spacing: -.02em; color: var(--text); margin: 6px 0 3px; line-height: 1; }
+.metric-val-text { font-size: 26px; }
+
+/* ── Score detail ────────────────────────────────────────────── */
+.panel { background: var(--card-bg); border: 1px solid var(--border); margin-top: 18px; }
+.panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+
+.score-row { display: grid; grid-template-columns: 160px 1fr 60px; gap: 16px; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border-light); }
+.score-row:last-child { border-bottom: none; }
+.score-track { height: 3px; background: var(--bar-bg); border-radius: 2px; }
+.score-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(.4,0,.2,1); width: 0; }
+
+/* ── AI summary ──────────────────────────────────────────────── */
+.ai-summary { background: var(--card-bg); border: 1px solid var(--border); margin-top: 18px; padding: 16px 18px; }
+.ai-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .1em; padding: 3px 9px; border-radius: 2px; }
+.ai-text { font-size: 12px; line-height: 1.75; color: var(--text-body); margin-top: 8px; }
+
+/* ── Report panel (removed) ──────────────────────────────────── */
+
+/* ── Upload modal ────────────────────────────────────────────── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.28); z-index: 100; display: flex; align-items: center; justify-content: center; }
+body.dark .overlay { background: rgba(0,0,0,.55); }
+.modal { background: var(--surface); border: 1px solid var(--border); padding: 26px; width: 460px; border-radius: 3px; color: var(--text); }
+
+.drop-zone { border: 1.5px dashed var(--drop-bd); border-radius: 3px; padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--text); background: var(--hover); }
+.drop-zone.has-files { border-color: var(--drop-ok); background: var(--drop-ok-bg); }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--chip-bg); border: 1px solid var(--chip-bd); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--chip-fg); }
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.btn { padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-body); border-radius: 2px; transition: background .1s; letter-spacing: .01em; }
+.btn:hover { background: var(--hover); }
+.btn-dark { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn-dark:hover { opacity:.85; }
+.btn-dark:disabled { opacity:.4; cursor: not-allowed; }
+
+/* ── Labels ──────────────────────────────────────────────────── */
+.lbl { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); font-weight: 500; }
+.lbl-dark { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-sec); font-weight: 600; }
+
+/* ── Misc ────────────────────────────────────────────────────── */
+.fade-in { animation: fi .35s ease; }
+@keyframes fi { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--sb-track); } ::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 2px; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); text-align: center; padding: 40px; }
+
+/* ── Tooltips (positioned by JS to avoid overflow clipping) ──── */
+#kairos-tip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  background: var(--tip-bg); color: var(--tip-fg);
+  font-size: 11px; line-height: 1.55; font-weight: 400; font-family: 'Inter', sans-serif;
+  padding: 6px 10px; border-radius: 3px;
+  max-width: 240px; white-space: normal; text-align: left;
+  opacity: 0; transition: opacity .15s ease;
+  display: none;
+}
+
+/* ── Paper cards ─────────────────────────────────────────────── */
+.paper-card { padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+.paper-card:last-child { border-bottom: none; }
+.paper-card a { color: var(--accent); text-decoration: none; font-weight: 500; }
+.paper-card a:hover { text-decoration: underline; }
+
+.btn-papers { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; text-decoration:none; font-size:.9rem; background:rgba(139,92,246,.06); border:1px solid rgba(139,92,246,.15); transition:all .2s; cursor:pointer; color:inherit; }
+.btn-papers:hover { background:rgba(139,92,246,.15); transform:scale(1.15); box-shadow:0 2px 8px rgba(139,92,246,.25); }
+.lit-papers-title { font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-sec); margin:1.2rem 0 .6rem; padding-bottom:.4rem; border-bottom:1px solid var(--border-light); }
+.lit-paper { display:block; text-decoration:none; padding:.7rem .8rem; border-radius:8px; border:1px solid var(--border); margin-bottom:.5rem; transition:all .2s; }
+.lit-paper:hover { border-color:var(--accent); background:var(--hover); transform:translateX(3px); }
+.lit-paper-title { font-size:.82rem; font-weight:500; color:var(--text); line-height:1.4; }
+.lit-paper-meta { font-size:.7rem; color:var(--text-sec); margin-top:.25rem; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div style="display:flex;align-items:baseline;">
+    <div class="nav-logo">KAIROS</div>
+    <span class="nav-sub">AI-Powered Genomic Case Triage — SOPHiA DDM™</span>
+  </div>
+  <div class="nav-right">
+    <button class="nav-btn" onclick="showKeyModal()" id="key-btn">⚙ API Key</button>
+    <button class="nav-btn" onclick="toggleTheme()" id="theme-btn">☀ Light</button>
+  </div>
+</nav>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span class="lbl" id="inbox-lbl">INBOX · 0 AWAITING REVIEW</span>
+      <div style="display:flex;gap:5px;">
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="loadDemo()" id="demo-btn">Demo</button>
+        <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="showModal()">+ Upload</button>
+      </div>
+    </div>
+    <div class="sidebar-list" id="sidebar-list">
+      <div class="empty-state" style="height:auto;padding:40px 20px;">
+        <div style="font-size:12px;margin-bottom:4px;">No patients scored yet</div>
+        <div style="font-size:11px;">Click + Upload to begin</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main detail -->
+  <div class="main" id="main">
+    <div class="empty-state" id="empty-main">
+      <div style="font-size:15px;font-weight:300;color:#6B7280;margin-bottom:4px;">Select a patient from the inbox</div>
+      <div style="font-size:12px;">or click + Upload to score new CSVs</div>
+    </div>
+    <div id="detail" style="display:none;"></div>
+  </div>
+
+</div>
+
+<!-- Rick Roll modal -->
+<div id="rick-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="position:relative;width:640px;max-width:90vw;">
+    <div style="background:#111;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-radius:3px 3px 0 0;">
+      <span style="color:#fff;font-size:11px;letter-spacing:.1em;font-weight:600;">REPORT FINALIZED ✓</span>
+      <button onclick="closeRick()" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:18px;line-height:1;">&times;</button>
+    </div>
+    <iframe id="rick-frame" width="640" height="360" style="max-width:90vw;display:block;border:none;"
+      src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- Gene info panel -->
+<div id="gene-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:150;align-items:flex-start;justify-content:flex-end;" onclick="if(event.target===this)closeGenePanel()">
+  <div style="background:#fff;border-left:1px solid #E5E7EB;width:460px;max-width:92vw;height:100%;display:flex;flex-direction:column;overflow:hidden;">
+    <!-- sticky header -->
+    <div style="padding:14px 18px;border-bottom:1px solid #E5E7EB;display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;background:#fff;">
+      <div>
+        <div class="lbl" style="margin-bottom:3px;">GENE · DATABASE LOOKUP</div>
+        <div id="gene-panel-title" style="font-size:20px;font-weight:300;color:#111;letter-spacing:-.01em;"></div>
+      </div>
+      <button onclick="closeGenePanel()" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:20px;line-height:1;margin-top:2px;">&times;</button>
+    </div>
+    <!-- scrollable body -->
+    <div id="gene-panel-body" style="flex:1;overflow-y:auto;padding:18px;font-size:12px;line-height:1.75;color:#374151;overflow-wrap:break-word;word-break:break-word;"></div>
+  </div>
+</div>
+
+<!-- Papers Modal -->
+<div class="overlay" id="papers-modal" style="display:none;">
+  <div class="modal" style="max-width:500px;text-align:left;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;font-size:16px;color:var(--text);">PubMed Search</h3>
+      <button onclick="closePapersModal()" style="background:none;border:none;cursor:pointer;color:var(--text-sec);font-size:18px;">&times;</button>
+    </div>
+    <div id="papers-modal-body" style="font-size:13px;color:var(--text-body);max-height:60vh;overflow-y:auto;padding-right:8px;">
+      Loading...
+    </div>
+  </div>
+</div>
+
+<!-- Upload / Replace Modal -->
+<div class="overlay" id="modal" style="display:none;" onclick="if(event.target===this)hideModal()">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span class="lbl-dark">Upload Variant CSVs</span>
+      <button onclick="hideModal()" style="background:none;border:none;cursor:pointer;color:#9CA3AF;font-size:18px;line-height:1;">&times;</button>
+    </div>
+
+    <div id="drop-zone" class="drop-zone"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+      <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" stroke-width="1.5" style="margin:0 auto 10px;display:block;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+      <div id="drop-label" style="font-size:12px;color:#6B7280;margin-bottom:3px;">Drag &amp; drop variant CSVs, or click to browse</div>
+      <div style="font-size:11px;color:#D1D5DB;">Up to 10 files · .csv .tsv</div>
+    </div>
+    <input id="file-input" type="file" accept=".csv,.tsv" multiple style="display:none" onchange="onFileSelect(event)"/>
+
+    <div id="chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:0;"></div>
+
+    <div id="modal-err" style="display:none;font-size:11px;color:#EF4444;margin-top:10px;"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;align-items:center;">
+      <div id="run-spin" style="display:none;font-size:11px;color:#6B7280;display:none;align-items:center;gap:6px;">
+        <svg class="spin" width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#9CA3AF" stroke-width="3"/><path fill="#6B7280" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+        Scoring…
+      </div>
+      <button class="btn" onclick="hideModal()">Cancel</button>
+      <button class="btn btn-dark" id="run-btn" onclick="runScoring()" disabled>Score Patients</button>
+    </div>
+  </div>
+</div>
+
+<!-- API Key modal -->
+<div class="overlay" id="key-modal" style="display:none;" onclick="if(event.target===this)hideKeyModal()">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span class="lbl-dark">Configure AI Provider</span>
+      <button onclick="hideKeyModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;">&times;</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label class="lbl" style="display:block;margin-bottom:6px;">Provider</label>
+      <select id="llm-provider" style="width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:2px;font-family:inherit;">
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="gemini">Google (Gemini)</option>
+        <option value="openai">OpenAI (GPT-4o)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label class="lbl" style="display:block;margin-bottom:6px;">API Key</label>
+      <input id="llm-key" type="password" placeholder="sk-... or AIza..." style="width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:2px;font-family:inherit;">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn" onclick="hideKeyModal()">Cancel</button>
+      <button class="btn btn-dark" onclick="saveKey()">Save</button>
+    </div>
+    <div id="key-status" style="font-size:11px;color:var(--text-muted);margin-top:10px;"></div>
+  </div>
+</div>
+
+<script>
+let selectedFiles=[], allResults=[], selectedIdx=null, selectedFile=null;
+let weights={abcd:7, clinvar:5, community:4, qa:4};
+let indications={}, llmResults={};
+const $=id=>document.getElementById(id);
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(n){return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1});}
+function toggleTheme(){document.body.classList.toggle('dark');const d=document.body.classList.contains('dark');localStorage.setItem('kairos-theme',d?'dark':'light');$('theme-btn').textContent=d?'\u263e Dark':'\u2600 Light';}
+(function(){if(localStorage.getItem('kairos-theme')==='dark'){document.body.classList.add('dark');setTimeout(()=>{if($('theme-btn'))$('theme-btn').textContent='\u263e Dark';},0);}})();
+function showKeyModal(){$('key-modal').style.display='flex';}
+function hideKeyModal(){$('key-modal').style.display='none';}
+async function saveKey(){const p=$('llm-provider').value,k=$('llm-key').value.trim();if(!k){$('key-status').textContent='Please enter an API key.';return;}try{const r=await fetch('/api/set_key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p,api_key:k})});const d=await r.json();$('key-status').textContent=d.success?'\u2713 '+p+' key saved':'Error';$('key-btn').textContent='\u2713 '+p;hideKeyModal();}catch(e){$('key-status').textContent='Error: '+e.message;}}
+async function fetchLLMSummary(r){if(llmResults[r.file])return llmResults[r.file];try{const res=await fetch('/api/llm_summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({top_variants:r.top_variants||[],total_variants:r['Rows analyzed']||0})});const d=await res.json();if(d.success){llmResults[r.file]=d;}return d;}catch(e){console.error('LLM:',e);return {success:false,error:String(e)};}}
+function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+function starsHtml(n){return'<span style="color:var(--star-on);letter-spacing:1px;">'+'<b>\u25cf</b>'.repeat(n)+'</span><span style="color:var(--star-off);">'+'<b>\u25cb</b>'.repeat(Math.max(0,4-n))+'</span>';}
+function clinvarColor(sig){const s=(sig||'').toLowerCase();if(s.includes('likely pathogenic'))return'var(--warn)';if(s.includes('pathogenic'))return'var(--danger)';if(s.includes('likely benign'))return'var(--accent)';if(s.includes('benign'))return'var(--ok)';return'var(--text-sec)';}
+function classCountPills(cc){return[['P','--pill-p'],['LP','--pill-lp'],['VUS','--pill-vus'],['LB','--pill-lb'],['B','--pill-b']].map(([k,v])=>'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:var('+v+'-bg);color:var('+v+'-fg);border:1px solid var('+v+'-bd);cursor:default;">'+k+': '+(cc[k]||0)+'</span>').join('');}
+function urgencyLevel(s){if(s>=70)return'CRITICAL';if(s>=50)return'HIGH';if(s>=30)return'MED';return'LOW';}
+function urgencyColor(l){return{CRITICAL:'var(--crit)',HIGH:'var(--high)',MED:'var(--med)',LOW:'var(--low)'}[l]||'var(--text-muted)';}
+function priBadgeClass(l){return{CRITICAL:'color:var(--crit);font-weight:700',HIGH:'color:var(--high);font-weight:600',MED:'color:var(--med);font-weight:500',LOW:'color:var(--text-muted)'}[l]||'';}
+function baseName(f){return f.replace(/ \(v\d+\)(\.[^.]+)$/,'$1').replace(/ \(v\d+\)$/,'');}
+function computeOverall(r){const a=r.abcd_score||0,c=r.clinvar_score||0,m=r.community_score||0,q=r.qa_score||0;const t=weights.abcd+weights.clinvar+weights.community+weights.qa;return t===0?0:Math.round(10*(a*weights.abcd+c*weights.clinvar+m*weights.community+q*weights.qa)/t)/10;}
+function onWeightChange(key,val){weights[key]=Number(val);const w=$('w-val-'+key);if(w)w.textContent=val;const r=allResults[selectedIdx];if(!r)return;const o=computeOverall(r);const el=$('card-overall');if(el)el.textContent=o.toFixed(0);const b=$('breakdown-overall');if(b)b.textContent=o.toFixed(2);renderSidebar();}
+function mergeWithVersioning(inc){inc.forEach(r=>{const b=r.file,c=allResults.filter(x=>baseName(x.file)===b).length;if(c>0)r.file=b.replace(/(\.[^.]+)$/,' (v'+(c+1)+')$1')||b+' (v'+(c+1)+')';r._uploadedAt=Date.now();allResults.push(r);});allResults.sort((a,b)=>(b.case_score||0)-(a.case_score||0));}
+
+
+
+
+
+
+// ── Modal ─────────────────────────────────────────────────────
+function showModal() { selectedFiles=[]; renderChips(); $('modal').style.display='flex'; $('modal-err').style.display='none'; }
+function hideModal() { $('modal').style.display='none'; }
+
+function onDragOver(e) { e.preventDefault(); $('drop-zone').classList.add('drag-over'); }
+function onDragLeave() { $('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); onDragLeave(); attachFiles([...e.dataTransfer.files].filter(f=>f.name.match(/\.(csv|tsv)$/i))); }
+function onFileSelect(e) { attachFiles([...e.target.files]); e.target.value=''; }
+
+function attachFiles(files) {
+  files.forEach(f => { if (!selectedFiles.find(x=>x.name===f.name)) selectedFiles.push(f); });
+  if (selectedFiles.length > 10) selectedFiles = selectedFiles.slice(0,10);
+  renderChips();
+}
+function removeFile(name) { selectedFiles=selectedFiles.filter(f=>f.name!==name); renderChips(); }
+
+function renderChips() {
+  const zone=$('drop-zone'), btn=$('run-btn'), lbl=$('drop-label'), chips=$('chips');
+  if (!selectedFiles.length) {
+    zone.classList.remove('has-files');
+    chips.innerHTML='';
+    lbl.textContent='Drag & drop variant CSVs, or click to browse';
+    btn.disabled=true; return;
+  }
+  zone.classList.add('has-files');
+  lbl.textContent=`${selectedFiles.length} file${selectedFiles.length>1?'s':''} ready — click to add more`;
+  chips.innerHTML=selectedFiles.map(f=>`
+    <div class="chip">
+      <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>${esc(f.name)}</span>
+      <span style="color:#93C5FD;font-size:10px;">${(f.size/1024).toFixed(0)}KB</span>
+      <button onclick="removeFile('${esc(f.name)}')" style="background:none;border:none;cursor:pointer;color:#93C5FD;font-size:13px;line-height:1;padding:0 0 0 2px;">&times;</button>
+    </div>`).join('');
+  btn.disabled=false;
+}
+
+// ── Score ─────────────────────────────────────────────────────
+async function runScoring() {
+  $('modal-err').style.display='none';
+  $('run-btn').disabled=true;
+  $('run-spin').style.display='flex';
+
+  const fd=new FormData();
+  selectedFiles.forEach(f=>fd.append('files',f));
+
+  try {
+    const res=await fetch('/api/score',{method:'POST',body:fd});
+    if(!res.ok) throw new Error(await res.text());
+    const data=await res.json();
+    mergeWithVersioning(data.results);
+    renderSidebar();
+    hideModal();
+    if(allResults.length) selectPatient(0);
+  } catch(e) {
+    $('modal-err').textContent=e.message.slice(0,200);
+    $('modal-err').style.display='block';
+  } finally {
+    $('run-btn').disabled=false;
+    $('run-spin').style.display='none';
+  }
+}
+
+// ── Demo ──────────────────────────────────────────────────────
+async function loadDemo() {
+  const btn = $('demo-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const res = await fetch('/api/demo');
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    allResults = data.results;
+    renderSidebar();
+    if (allResults.length) selectPatient(0);
+  } catch(e) {
+    alert('Demo load failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Demo';
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+function renderSidebar() {
+  allResults.sort((a,b) => computeOverall(b) - computeOverall(a));
+  if (selectedFile) selectedIdx = allResults.findIndex(r => r.file === selectedFile);
+
+  $('inbox-lbl').textContent=`INBOX · ${allResults.length} AWAITING REVIEW`;
+  if(!allResults.length){
+    $('sidebar-list').innerHTML=`<div class="empty-state" style="height:auto;padding:40px 20px;"><div style="font-size:12px;">No patients scored</div></div>`;
+    return;
+  }
+  const maxOverall=Math.max(...allResults.map(r=>computeOverall(r)),1);
+
+  $('sidebar-list').innerHTML=allResults.map((r,i)=>{
+    const overall=computeOverall(r);
+    const urgencyScore=r['case_score']||0; // use case_score for urgency label
+    const level=urgencyLevel(urgencyScore);
+    const pct=Math.min((overall/maxOverall)*100,100);
+    const name=patientName(r.file);
+    const caseId='NX-'+String(i+2418);
+    return `
+    <div class="patient-row ${selectedIdx===i?'active':''}" onclick="selectPatient(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="min-width:0;">
+          <div class="lbl" style="margin-bottom:2px;">${caseId}</div>
+          <div style="font-size:15px;font-weight:300;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+          <div style="font-size:11px;color:var(--text-sec);margin-top:2px;">★ ${esc(r.file)} · <span data-tip="Time elapsed since this CSV was scored in this session" style="cursor:default;">${r._uploadedAt ? timeAgo(r._uploadedAt) : ''}</span></div>
+          ${(r.top_genes||[]).length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;">${(r.top_genes||[]).slice(0,3).map(g=>`<span style="font-size:9px;font-weight:600;letter-spacing:.03em;padding:1px 5px;border-radius:2px;background:${g.prediction==='A'?'var(--pill-p-bg)':'var(--pill-lp-bg)'};color:${g.prediction==='A'?'var(--pill-p-fg)':'var(--pill-lp-fg)'};border:1px solid ${g.prediction==='A'?'var(--pill-p-bd)':'var(--pill-lp-bd)'};">${esc(g.gene)}</span>`).join('')}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
+          <span data-tip="Priority tier based on Case score. CRITICAL ≥70%, HIGH ≥50%, MED ≥30%, LOW below that." style="font-size:10px;letter-spacing:.1em;${priBadgeClass(level)};cursor:default;">${level}</span>
+          ${(r.actionable_count||0) > 0 ? `<span data-tip="Variants with DDM prediction A — direct therapeutic relevance. Click to open and review the Top Variants table." style="font-size:9px;font-weight:600;color:var(--pill-p-fg);background:var(--pill-p-bg);border:1px solid var(--pill-p-bd);border-radius:2px;padding:1px 5px;cursor:default;">${r.actionable_count} act.</span>` : ''}
+        </div>
+      </div>
+      <div class="pri-bar">
+        <div class="pri-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <div style="text-align:right;font-size:12px;font-weight:500;color:var(--text-sec);margin-top:2px;">${overall.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+}
+
+function patientName(filename) {
+  return filename.replace(/\.(csv|tsv)$/i,'').replace(/_/g,' ');
+}
+
+// ── Detail ────────────────────────────────────────────────────
+function selectPatient(idx) {
+  selectedIdx=idx;
+  selectedFile = allResults[idx] ? allResults[idx].file : null;
+  renderSidebar();
+  const r=allResults[selectedIdx];
+  if(!r) return;
+
+  $('empty-main').style.display='none';
+  $('detail').style.display='block';
+
+  const overall = computeOverall(r);
+  const abcd = r['abcd_score'] || 0;
+  const clinvar = r['clinvar_score'] || 0;
+  const community = r['community_score'] || 0;
+  const qa = r['qa_score'] || 0;
+  const caseScore = r['case_score'] || 0;
+  const rows = r['Rows analyzed'] || 0;
+  const level = urgencyLevel(caseScore);
+  const urgColor = urgencyColor(level);
+  const name = patientName(r.file);
+  const caseId = 'NX-' + String(idx + 2418);
+
+  $('detail').innerHTML=`
+  <div class="main-inner fade-in">
+
+    <!-- Header -->
+    <div class="lbl" style="margin-bottom:10px;">CASE · ${caseId} · VARIANT PANEL</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <h1 style="font-size:30px;font-weight:300;letter-spacing:-.01em;color:var(--text);line-height:1.1;margin-bottom:4px;">${esc(name)}</h1>
+        <div style="font-size:12px;color:var(--text-sec);">${rows.toLocaleString()} variants analysed · ${esc(r.file)}</div>
+        ${(r.top_genes||[]).length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;">
+          ${(r.top_genes||[]).map(g=>`
+            <span onclick="openGenePanel('${esc(g.gene)}')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:2px;background:${g.prediction==='A'?'var(--pill-p-bg)':'var(--pill-lp-bg)'};color:${g.prediction==='A'?'var(--pill-p-fg)':'var(--pill-lp-fg)'};border:1px solid ${g.prediction==='A'?'var(--pill-p-bd)':'var(--pill-lp-bd)'};cursor:pointer;" data-tip="Click to look up ${esc(g.gene)} in genomic databases">
+              ${esc(g.gene)}<span style="font-size:9px;opacity:.7;">${g.prediction}</span>
+            </span>`).join('')}
+        </div>` : ''}
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:10px;">
+          ${classCountPills(r.classification_counts||{})}
+          ${(r.vaf_stats&&r.vaf_stats.mean!=null) ? `<span data-tip="Variant Allele Frequency range across all variants." style="font-size:10px;color:var(--text-sec);margin-left:4px;cursor:default;">VAF ${r.vaf_stats.min}–${r.vaf_stats.max}% · mean ${r.vaf_stats.mean}%</span>` : ''}
+          ${(r.actionable_count||0)>0 ? `<span data-tip="Number of variants with SOPHiA DDM™ prediction A." style="font-size:10px;font-weight:600;color:var(--pill-p-fg);cursor:default;">· ${r.actionable_count} actionable</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;">
+          <span class="lbl" data-tip="Free-text clinical indication." style="flex-shrink:0;cursor:default;">Indication</span>
+          <input type="text" value="${esc(indications[r.file]||'')}" placeholder="Enter clinical indication…"
+            oninput="indications['${esc(r.file)}']=this.value"
+            style="flex:1;max-width:320px;border:none;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-body);background:transparent;outline:none;padding:2px 0;font-family:inherit;">
+        </div>
+      </div>
+    </div>
+
+    ${(r.low_coverage_genes||[]).length ? `
+    <div style="margin-top:14px;padding:10px 14px;border:1px solid var(--warn);background:var(--pill-lp-bg);border-radius:2px;font-size:11px;color:var(--warn);display:flex;gap:8px;align-items:flex-start;">
+      <span style="font-weight:600;flex-shrink:0;cursor:default;">⚠ Low coverage:</span>
+      <span>${r.low_coverage_genes.map(g=>`${esc(g.gene)} (${g.depth}×)`).join(' · ')}</span>
+    </div>` : ''}
+
+    ${r.error ? `<div style="margin-top:14px;padding:12px 14px;border:1px solid var(--danger);background:var(--pill-p-bg);font-size:12px;color:var(--danger);border-radius:2px;">${esc(r.error)}</div>` : ''}
+
+    <!-- 5 metric cards -->
+    <div class="metrics" style="grid-template-columns: repeat(5, 1fr);">
+      <div class="metric" data-tip="Weighted average of the 4 GenomicSophia metrics based on your sliders.">
+        <div class="lbl">Priority</div>
+        <div class="metric-val" id="card-overall">${overall.toFixed(0)}</div>
+        <div class="lbl" style="color:var(--text-sec);">composite</div>
+      </div>
+      <div class="metric" data-tip="Based on SOPHiA DDM prediction A (100) or B (50).">
+        <div class="lbl">Urgency (ABCD)</div>
+        <div class="metric-val">${abcd.toFixed(0)}</div>
+        <div style="font-size:11px;color:var(--text-sec);">prediction weight</div>
+      </div>
+      <div class="metric" data-tip="Weighted pathogenic variant presence from ClinVar data.">
+        <div class="lbl">ClinVar</div>
+        <div class="metric-val">${clinvar.toFixed(0)}</div>
+        <div style="font-size:11px;color:var(--text-sec);">clinical significance</div>
+      </div>
+      <div class="metric" data-tip="Inverted community frequency for A/B variants.">
+        <div class="lbl">Rarity</div>
+        <div class="metric-val">${community.toFixed(0)}</div>
+        <div style="font-size:11px;color:var(--text-sec);">community database</div>
+      </div>
+      <div class="metric" data-tip="Read depth QA confidence.">
+        <div class="lbl">QA Confidence</div>
+        <div class="metric-val">${qa.toFixed(0)}%</div>
+        <div style="font-size:11px;color:var(--text-sec);">read-depth</div>
+      </div>
+    </div>
+    
+    <!-- AI Summary section -->
+    <div class="ai-summary" id="ai-summary-${idx}" style="margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="lbl-dark">AI Clinical Summary</span>
+        <button class="btn" style="padding:3px 10px;font-size:10px;" onclick="triggerLLM(${idx})">🤖 Generate AI Summary</button>
+      </div>
+      <div id="ai-summary-body-${idx}" class="ai-text" style="margin-top:8px;color:var(--text-muted);font-style:italic;">Click "Generate AI Summary" to analyze with LLM. Requires API key.</div>
+    </div>
+
+    <!-- Score breakdown -->
+    <div class="panel" style="margin-top:20px;">
+      <div class="panel-head">
+        <span class="lbl-dark">Score Breakdown · GenomicSophia ai_engine.py</span>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;">Urgency (ABCD)</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+            <span class="lbl">Weight</span>
+            <input type="range" min="0" max="10" value="${weights.abcd}" oninput="onWeightChange('abcd',this.value)" style="width:72px;accent-color:var(--crit);cursor:pointer;">
+            <span id="w-val-abcd" style="font-size:10px;color:var(--text-sec);min-width:10px;">${weights.abcd}</span>
+          </div>
+        </div>
+        <div class="score-track"><div class="score-fill" data-w="${abcd.toFixed(1)}" style="background:var(--crit);width:0%;"></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--crit);text-align:right;">${abcd.toFixed(1)}</div>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;">ClinVar Score</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+            <span class="lbl">Weight</span>
+            <input type="range" min="0" max="10" value="${weights.clinvar}" oninput="onWeightChange('clinvar',this.value)" style="width:72px;accent-color:var(--high);cursor:pointer;">
+            <span id="w-val-clinvar" style="font-size:10px;color:var(--text-sec);min-width:10px;">${weights.clinvar}</span>
+          </div>
+        </div>
+        <div class="score-track"><div class="score-fill" data-w="${clinvar.toFixed(1)}" style="background:var(--high);width:0%;"></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--high);text-align:right;">${clinvar.toFixed(1)}</div>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;">Rarity (Community)</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+            <span class="lbl">Weight</span>
+            <input type="range" min="0" max="10" value="${weights.community}" oninput="onWeightChange('community',this.value)" style="width:72px;accent-color:var(--ok);cursor:pointer;">
+            <span id="w-val-community" style="font-size:10px;color:var(--text-sec);min-width:10px;">${weights.community}</span>
+          </div>
+        </div>
+        <div class="score-track"><div class="score-fill" data-w="${community.toFixed(1)}" style="background:var(--ok);width:0%;"></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--ok);text-align:right;">${community.toFixed(1)}</div>
+      </div>
+
+      <div class="score-row">
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:2px;">QA Confidence</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:6px;">
+            <span class="lbl">Weight</span>
+            <input type="range" min="0" max="10" value="${weights.qa}" oninput="onWeightChange('qa',this.value)" style="width:72px;accent-color:var(--accent);cursor:pointer;">
+            <span id="w-val-qa" style="font-size:10px;color:var(--text-sec);min-width:10px;">${weights.qa}</span>
+          </div>
+        </div>
+        <div class="score-track"><div class="score-fill" data-w="${qa.toFixed(1)}" style="background:var(--accent);width:0%;"></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--accent);text-align:right;">${qa.toFixed(1)}</div>
+      </div>
+
+      <div style="padding:12px 16px;background:var(--hover);border-top:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text-sec);">Overall = weighted mean</span>
+        <span id="breakdown-overall" style="font-size:15px;font-weight:600;color:var(--text);">${overall.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <!-- Top variants table -->
+    ${(r.top_variants||[]).length ? `
+    <div class="panel" style="margin-top:18px;">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="lbl-dark">Top Variants · A/B Prediction</span>
+        <span class="lbl">${r.top_variants.length} shown</span>
+      </div>
+      <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px 40px;gap:0;border-bottom:1px solid var(--border-light);padding:6px 16px;background:var(--hover);">
+        <div class="lbl" style="cursor:default;">Gene</div>
+        <div class="lbl" style="cursor:default;">DDM</div>
+        <div class="lbl" style="cursor:default;">Consequence · Protein</div>
+        <div class="lbl" style="cursor:default;">ClinVar</div>
+        <div class="lbl" style="text-align:center;cursor:default;">★</div>
+        <div class="lbl" style="text-align:right;cursor:default;">VAF%</div>
+        <div class="lbl" style="text-align:center;cursor:default;">Papers</div>
+      </div>
+      ${r.top_variants.map(v=>`
+      <div style="display:grid;grid-template-columns:70px 28px 1fr 130px 55px 42px 40px;gap:0;padding:9px 16px;border-bottom:1px solid var(--border-light);align-items:center;" onmouseenter="this.style.background='var(--hover)'" onmouseleave="this.style.background=''">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" onclick="openGenePanel('${esc(v.gene)}')">${esc(v.gene)}</div>
+        <div><span style="font-size:10px;font-weight:700;padding:1px 5px;border-radius:2px;background:${v.prediction==='A'?'var(--pill-p-bg)':'var(--pill-lp-bg)'};color:${v.prediction==='A'?'var(--pill-p-fg)':'var(--pill-lp-fg)'};border:1px solid ${v.prediction==='A'?'var(--pill-p-bd)':'var(--pill-lp-bd)'};">${esc(v.prediction)}</span></div>
+        <div style="min-width:0;">
+          <div style="font-size:11px;color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(v.consequence)}</div>
+          <div style="font-size:10px;color:var(--text-sec);font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(v.protein)}</div>
+        </div>
+        <div style="font-size:10px;color:${clinvarColor(v.clinvar)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(v.clinvar)}">${esc(v.clinvar)}</div>
+        <div style="text-align:center;font-size:10px;">${starsHtml(v.clinvar_stars||0)}</div>
+        <div style="text-align:right;font-size:11px;font-weight:500;color:var(--text-body);">${v.vaf!=null?v.vaf+'%':'—'}</div>
+        <div style="text-align:center;"><button class="btn-papers" onclick="event.stopPropagation();openPapersModal('${esc(v.gene)}','${esc(v.hgvs||'')}','${esc(v.consequence||'')}')" title="Find papers about ${esc(v.gene)}">📚</button></div>
+      </div>`).join('')}
+    </div>` : ''}
+
+
+    <!-- All patients comparison -->
+    ${allResults.length > 1 ? renderComparison(idx) : ''}
+
+  </div>`;
+
+  // Animate bars
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#detail .score-fill').forEach(b=>{
+      b.style.width=(b.dataset.w||0)+'%';
+    });
+    document.querySelectorAll('#detail .pri-fill').forEach(b=>{
+      b.style.width=(b.dataset.w||0)+'%';
+    });
+  });
+
+  // Trigger LLM if result already cached
+  if (llmResults[r.file]) {
+    setTimeout(() => renderLLMResult(idx, llmResults[r.file]), 50);
+  }
+}
+
+async function triggerLLM(idx) {
+  const r = allResults[idx];
+  if (!r) return;
+  const body = document.getElementById('ai-summary-body-' + idx);
+  if (!body) return;
+  body.innerHTML = '<span style="color:var(--text-muted);">⏳ Analyzing with AI...</span>';
+  const result = await fetchLLMSummary(r);
+  if (result && result.success) {
+    renderLLMResult(idx, result);
+  } else {
+    const err = result && result.error ? result.error : 'No API key configured or unknown LLM error. Set your key via ⚙ API Key.';
+    body.innerHTML = `<span style="color:var(--crit);">${esc(err)}</span>`;
+  }
+}
+
+function renderLLMResult(idx, result) {
+  const body = document.getElementById('ai-summary-body-' + idx);
+  if (!body) return;
+  const score = result.importance_score || 0;
+  const color = score >= 80 ? 'var(--crit)' : score >= 60 ? 'var(--high)' : score >= 40 ? 'var(--med)' : 'var(--low)';
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span class="ai-badge" style="background:${color};color:#fff;">AI SCORE: ${score}</span>
+      <span style="font-size:11px;color:var(--text-muted);">importance (0–100)</span>
+    </div>
+    <div style="font-style:normal;">${esc(result.summary || '')}</div>
+  `;
+}
+
+function renderComparison(activeIdx) {
+  const maxOverall=Math.max(...allResults.map(r=>computeOverall(r)),1);
+  const rows=allResults.map((r,i)=>{
+    const overall=computeOverall(r);
+    const caseScore=r['case_score']||0;
+    const qa=r['qa_score']||0;
+    const level=urgencyLevel(caseScore);
+    const pct=Math.min((overall/maxOverall)*100,100);
+    const isActive=i===activeIdx;
+    return `
+    <div style="display:grid;grid-template-columns:22px 1fr 80px 70px 70px;gap:14px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border-light);${isActive?'background:var(--hover);':''}" onclick="selectPatient(${i})" style="cursor:pointer">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);">${i+1}</div>
+      <div style="font-size:12px;font-weight:${isActive?'600':'400'};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(patientName(r.file))}</div>
+      <div style="font-size:11px;color:${urgencyColor(level)};font-weight:600;text-align:center;">${level}</div>
+      <div style="font-size:11px;color:var(--text-sec);text-align:right;">${qa.toFixed(0)}%</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);text-align:right;">${overall.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="lbl-dark">All Patients · Ranked</span>
+      <span class="lbl">${allResults.length} total</span>
+    </div>
+    <div style="display:grid;grid-template-columns:22px 1fr 80px 70px 70px;gap:14px;padding:8px 16px;background:var(--hover);border-bottom:1px solid var(--border);">
+      <div></div>
+      <div class="lbl">Patient</div>
+      <div class="lbl" style="text-align:center;">Urgency</div>
+      <div class="lbl" style="text-align:right;">QA</div>
+      <div class="lbl" style="text-align:right;">Score</div>
+    </div>
+    ${rows}
+  </div>
+  ${sharedGenesHtml()}`;
+}
+
+function sharedGenesHtml() {
+  const geneMap = {};
+  allResults.forEach(r => {
+    (r.top_genes||[]).forEach(({gene, prediction}) => {
+      if (!geneMap[gene]) geneMap[gene] = {files: [], prediction};
+      geneMap[gene].files.push(patientName(r.file));
+    });
+  });
+  const shared = Object.entries(geneMap).filter(([,v]) => v.files.length > 1)
+    .sort((a,b) => b[1].files.length - a[1].files.length);
+  if (!shared.length) return '';
+  return `
+  <div class="panel" style="margin-top:0;border-top:none;">
+    <div class="panel-head"><span class="lbl-dark" data-tip="Genes with A/B-class variants appearing in multiple patients in this batch. Recurrent hits may indicate a hotspot or — if unexpected — a run-level sequencing artefact worth investigating." style="cursor:default;">Shared Genes · Across Patients</span></div>
+    ${shared.map(([gene, {files, prediction}]) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #F9FAFB;">
+      <span onclick="openGenePanel('${esc(gene)}')" style="font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;background:${prediction==='A'?'#FEF2F2':'#FFF7ED'};color:${prediction==='A'?'#DC2626':'#C2410C'};border:1px solid ${prediction==='A'?'#FCA5A5':'#FED7AA'};flex-shrink:0;cursor:pointer;" data-tip="Click to look up ${esc(gene)} in genomic databases">${esc(gene)}</span>
+      <span style="font-size:11px;color:#6B7280;">${files.map(f=>esc(f)).join(' · ')}</span>
+      <span style="margin-left:auto;font-size:10px;color:#9CA3AF;">${files.length} patients</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+
+
+// ── Gene info panel ───────────────────────────────────────────
+const geneCache = {};
+
+function openGenePanel(gene) {
+  $('gene-panel-title').textContent = gene;
+  $('gene-panel-body').innerHTML = '<div style="text-align:center;padding:40px;color:#9CA3AF;">Loading…</div>';
+  $('gene-overlay').style.display = 'flex';
+  if (geneCache[gene]) { renderGenePanel(gene, geneCache[gene]); return; }
+
+  Promise.allSettled([
+    fetch(`https://mygene.info/v3/query?q=symbol:${encodeURIComponent(gene)}&species=human&fields=summary,name,alias,MIM,entrezgene&size=1`).then(r=>r.json()),
+    fetch(`https://civicdb.org/api/genes?name=${encodeURIComponent(gene)}&count=1`).then(r=>r.json()),
+  ]).then(([mg, cv]) => {
+    const data = {
+      mg: mg.status==='fulfilled' ? mg.value?.hits?.[0] : null,
+      cv: cv.status==='fulfilled' ? cv.value?.records?.[0] : null,
+    };
+    geneCache[gene] = data;
+    renderGenePanel(gene, data);
+  });
+}
+
+function closeGenePanel() { $('gene-overlay').style.display='none'; }
+
+function fmtText(raw) {
+  if (!raw) return '';
+  const cleaned = raw
+    .replace(/\[provided by [^\]]+\]/gi, '')  // strip NCBI source tags
+    .replace(/\[PubMed[^\]]*\]/gi, '')        // strip PubMed refs
+    .trim();
+  // Split on double newlines into paragraphs, escape each, join
+  return cleaned.split(/\n{2,}/)
+    .map(para => `<p style="margin:0 0 10px;">${esc(para.trim()).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
+function renderGenePanel(gene, {mg, cv}) {
+  const fullName = mg?.name || cv?.full_name || '';
+  const summary  = mg?.summary || cv?.description || '';
+  const entrezId = mg?.entrezgene;
+  const omimId   = Array.isArray(mg?.MIM) ? mg.MIM[0] : mg?.MIM;
+  const civicId  = cv?.id;
+  const aliases  = (mg?.alias || []).slice(0,6);
+
+  let html = '';
+
+  if (fullName) html += `<div style="font-size:13px;font-weight:500;color:#111;margin-bottom:14px;">${esc(fullName)}</div>`;
+
+  if (aliases.length) html += `<div style="margin-bottom:14px;"><span class="lbl">Also known as </span><span style="font-size:11px;color:#6B7280;">${aliases.map(esc).join(' · ')}</span></div>`;
+
+  if (summary) {
+    html += `
+    <div style="margin-bottom:18px;">
+      <div class="lbl-dark" style="margin-bottom:6px;">Description</div>
+      <div style="color:#374151;font-size:12px;line-height:1.75;">${fmtText(summary)}</div>
+    </div>`;
+  }
+
+  if (cv) {
+    const varCount = cv.variants_count ?? '—';
+    html += `
+    <div style="margin-bottom:18px;padding:12px 14px;background:#F8FAFF;border:1px solid #DBEAFE;border-radius:2px;">
+      <div class="lbl-dark" style="margin-bottom:6px;">CIViC Clinical Evidence</div>
+      <div style="font-size:12px;color:#374151;"><strong style="color:#1D4ED8;">${varCount}</strong> curated clinical variant${varCount!==1?'s':''} in the CIViC database.</div>
+      ${cv.description && !mg?.summary ? `<div style="font-size:12px;color:#374151;margin-top:8px;">${fmtText(cv.description)}</div>` : ''}
+    </div>`;
+  }
+
+  // External database links
+  const links = [
+    civicId  ? {url:`https://civicdb.org/genes/${civicId}/summary`,label:'CIViC',color:'#7C3AED',tip:'Clinical Interpretation of Variants in Cancer'} : {url:`https://civicdb.org/genes?search=${gene}`,label:'CIViC',color:'#7C3AED',tip:'Clinical Interpretation of Variants in Cancer'},
+    entrezId ? {url:`https://www.ncbi.nlm.nih.gov/gene/${entrezId}`,label:'NCBI Gene',color:'#0369A1',tip:'NCBI Gene record — function, expression, interactions'} : null,
+    {url:`https://gnomad.broadinstitute.org/gene/${gene}?dataset=gnomad_r4`,label:'gnomAD',color:'#059669',tip:'Population variant frequencies — genome Aggregation Database'},
+    {url:`https://www.ncbi.nlm.nih.gov/clinvar/?term=${gene}[gene]`,label:'ClinVar',color:'#DC2626',tip:'ClinVar — curated variant pathogenicity classifications'},
+    omimId   ? {url:`https://omim.org/entry/${omimId}`,label:'OMIM',color:'#D97706',tip:'Online Mendelian Inheritance in Man — gene-disease relationships'} : {url:`https://omim.org/search?search=${gene}`,label:'OMIM',color:'#D97706',tip:'Online Mendelian Inheritance in Man — gene-disease relationships'},
+    {url:`https://cancer.sanger.ac.uk/cosmic/gene/analysis?ln=${gene}`,label:'COSMIC',color:'#0891B2',tip:'Catalogue Of Somatic Mutations In Cancer'},
+    {url:`https://dgidb.org/genes/${gene}`,label:'DGIdb',color:'#6D28D9',tip:'Drug-Gene Interaction Database — known drug targets and interactions'},
+  ].filter(Boolean);
+
+  html += `
+  <div>
+    <div class="lbl-dark" style="margin-bottom:10px;">External Databases</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${links.map(({url,label,color,tip})=>`
+        <a href="${url}" target="_blank" rel="noopener" data-tip="${tip}"
+           style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:5px 11px;border-radius:2px;border:1px solid ${color};color:${color};text-decoration:none;background:#fff;">
+          ${label} <span style="font-size:9px;">↗</span>
+        </a>`).join('')}
+    </div>
+  </div>`;
+
+  if (!summary && !cv) {
+    html += `<p style="color:var(--text-muted);font-size:11px;margin-top:16px;">No database entry found for <strong>${esc(gene)}</strong>. Check the external links above.</p>`;
+  }
+
+  // PubMed papers section (loaded async)
+  html += `
+  <div style="margin-top:18px;">
+    <div class="lbl-dark" style="margin-bottom:10px;">Recent PubMed Papers</div>
+    <div id="pubmed-papers" style="font-size:12px;color:var(--text-muted);">Loading papers…</div>
+  </div>`;
+
+  $('gene-panel-body').innerHTML = html;
+
+  // Fetch PubMed papers asynchronously
+  fetch('/api/papers/' + encodeURIComponent(gene))
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('pubmed-papers');
+      if (!el) return;
+      const papers = data.papers || [];
+      if (!papers.length) {
+        el.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">No recent papers found.</span>';
+        return;
+      }
+      el.innerHTML = papers.map(p => `
+        <div class="paper-card">
+          <a href="${p.url}" target="_blank" rel="noopener" style="font-size:11px;line-height:1.5;">${esc(p.title)}</a>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">${esc(p.authors)}</div>
+          <div style="font-size:10px;color:var(--text-muted);">${esc(p.journal)} · ${esc(p.date)}</div>
+        </div>
+      `).join('');
+    })
+    .catch(() => {
+      const el = document.getElementById('pubmed-papers');
+      if (el) el.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">Failed to load papers.</span>';
+    });
+}
+
+// ── Easter egg ────────────────────────────────────────────────
+function rickRoll() {
+  $('rick-overlay').style.display='flex';
+  $('rick-frame').src='https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
+}
+function closeRick() {
+  $('rick-overlay').style.display='none';
+  $('rick-frame').src='';
+}
+
+// ── JS tooltip (fixed positioning, never clipped by overflow containers) ──
+(function() {
+  const tip = document.createElement('div');
+  tip.id = 'kairos-tip';
+  document.body.appendChild(tip);
+  let current = null;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el === current) return;
+    current = el;
+    if (!el) { tip.style.opacity = '0'; return; }
+    tip.textContent = el.getAttribute('data-tip');
+    tip.style.display = 'block';
+    tip.style.left = '0';
+    tip.style.top = '0';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = Math.min(Math.max(r.left, 8), window.innerWidth - tw - 8);
+    let top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+    requestAnimationFrame(() => tip.style.opacity = '1');
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-tip]') && !e.relatedTarget?.closest('[data-tip]')) {
+      current = null;
+      tip.style.opacity = '0';
+    }
+  });
+})();
+
+// ── Papers Modal ─────────────────────────────────────────────
+function openPapersModal(gene, hgvs, consequence) {
+  const modal = document.getElementById('papers-modal');
+  modal.style.display = 'flex';
+  const body = document.getElementById('papers-modal-body');
+  body.innerHTML = 'Searching PubMed...';
+  
+  fetch('/api/papers/' + encodeURIComponent(gene) + (hgvs ? '?hgvs=' + encodeURIComponent(hgvs) : ''))
+    .then(r => r.json())
+    .then(d => {
+      const papers = d.papers || [];
+      if (papers.length) {
+        let html = '<div class="lit-papers-title">Recent PubMed Papers (' + papers.length + ')</div>';
+        html += papers.map(p => `
+          <a href="${p.url}" target="_blank" class="lit-paper">
+            <div class="lit-paper-title">${esc(p.title)}</div>
+            <div class="lit-paper-meta">${esc(p.authors)} · ${esc(p.journal)} · ${esc(p.date)}</div>
+          </a>
+        `).join('');
+        body.innerHTML = html;
+      } else {
+        body.innerHTML = '<p style="color:var(--text-sec);font-size:.82rem;margin-top:1rem">No papers found on PubMed for this variant.</p>';
+      }
+    })
+    .catch(e => {
+      body.innerHTML = '<p style="color:var(--danger);font-size:.82rem;margin-top:1rem">Error fetching papers.</p>';
+    });
+}
+function closePapersModal() {
+  document.getElementById('papers-modal').style.display = 'none';
+}
+
+// Close papers modal when clicking outside
+document.getElementById('papers-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closePapersModal();
+});
+</script>
+</body>
+</html>
