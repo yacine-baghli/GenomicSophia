@@ -2,7 +2,6 @@
 
 **AI-assisted genomic case triage** — built for the SOPHiA Genetics × ETH Zurich Future of Health Hackathon (May 8–10, 2026).
 
-🌐 Live Website : ([https://genomicsophia-interface.vercel.app/](https://genomic-sophia.vercel.app )) 
 
 Helps genomic pathologists prioritize their caseload by automatically ranking patients by clinical urgency from SOPHiA DDM™ variant export CSVs. It features a transparent, 4-metric scoring system, real-time literature retrieval, and an advanced AI clinical summarization engine powered by Claude.
 
